@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuizLab — Studia con i quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Mulish:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF6EC;
+    --bg-grain:#FFEFDD;
+    --surface:#FFFFFF;
+    --ink:#2E2A32;
+    --ink-soft:#6B6470;
+    --line:#F0E4D6;
+    --line-strong:#E7D7C4;
+    --primary:#FF6B5E;
+    --primary-ink:#C4382C;
+    --teal:#17A398;
+    --shadow:0 10px 28px -14px rgba(74,52,40,.30);
+    --shadow-sm:0 4px 14px -8px rgba(74,52,40,.28);
+    --r:22px;
+    --r-sm:14px;
+    /* palette materie */
+    --c1:#FF6B5E; --c2:#FF9F45; --c3:#F4C430; --c4:#3DD6A0;
+    --c5:#17A398; --c6:#4DA6FF; --c7:#8A7BFF; --c8:#FF7EB6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Mulish",system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 500px at 110% -10%, #FFE7D0 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 0%, #FFEAD9 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4,.display{font-family:"Baloo 2",cursive;font-weight:700;line-height:1.1;margin:0}
+  button{font-family:inherit;cursor:pointer;border:none;background:none}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+
+  /* HEADER */
+  header.top{position:sticky;top:0;z-index:30;backdrop-filter:saturate(1.2) blur(8px);
+    background:rgba(255,246,236,.82);border-bottom:1px solid var(--line)}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:14px 0}
+  .brand{display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none}
+  .logo{width:42px;height:42px;border-radius:13px;background:var(--primary);
+    display:grid;place-items:center;color:#fff;font-size:22px;font-weight:800;
+    box-shadow:0 6px 0 0 #E0473B; transform:rotate(-4deg)}
+  .brand b{font-family:"Baloo 2";font-size:23px;letter-spacing:-.3px}
+  .brand span{display:block;font-size:11px;color:var(--ink-soft);font-weight:700;
+    text-transform:uppercase;letter-spacing:1.5px;margin-top:-2px}
+  .spacer{flex:1}
+  .nav-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;
+    font-weight:800;font-size:14px;color:var(--ink);background:var(--surface);
+    border:1.5px solid var(--line-strong);transition:transform .12s,box-shadow .12s,background .12s}
+  .nav-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+  .nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .nav-btn.admin{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+  /* GENERIC */
+  .pagepad{padding:34px 0 70px}
+  .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:26px}
+  .hero h1{font-size:clamp(30px,5vw,46px);letter-spacing:-.5px}
+  .hero p{margin:8px 0 0;color:var(--ink-soft);font-weight:600;max-width:46ch}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--line-strong);
+    padding:7px 14px;border-radius:999px;font-weight:800;font-size:13px;color:var(--primary-ink)}
+
+  .crumbs{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px;color:var(--ink-soft);margin-bottom:18px;flex-wrap:wrap}
+  .crumbs a{color:var(--teal);cursor:pointer;text-decoration:none}
+  .crumbs a:hover{text-decoration:underline}
+  .crumbs .sep{opacity:.5}
+
+  /* GRID CARDS */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:18px}
+  .card{position:relative;background:var(--surface);border-radius:var(--r);padding:22px;
+    border:1.5px solid var(--line);box-shadow:var(--shadow-sm);cursor:pointer;overflow:hidden;
+    transition:transform .15s ease,box-shadow .15s ease;animation:pop .45s both}
+  .card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+  .card .ic{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:28px;margin-bottom:16px}
+  .card h3{font-size:21px;margin-bottom:5px;letter-spacing:-.3px}
+  .card .meta{font-weight:700;font-size:13px;color:var(--ink-soft)}
+  .card .corner{position:absolute;right:-26px;top:-26px;width:84px;height:84px;border-radius:50%;opacity:.16}
+  .card .go{margin-top:16px;display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:14px}
+
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:60px 20px;border:2px dashed var(--line-strong);border-radius:var(--r);
+    background:rgba(255,255,255,.5)}
+  .empty .big{font-size:54px;margin-bottom:10px}
+  .empty h3{font-size:24px;margin-bottom:8px}
+  .empty p{color:var(--ink-soft);font-weight:600;margin:0 0 18px}
+
+  /* QUIZ */
+  .quizbox{max-width:680px;margin:0 auto}
+  .progress{height:12px;border-radius:999px;background:#fff;border:1.5px solid var(--line-strong);overflow:hidden;margin-bottom:6px}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),#FF9F45);
+    border-radius:999px;transition:width .4s ease}
+  .qcount{font-weight:800;color:var(--ink-soft);font-size:13px;margin-bottom:22px;text-align:right}
+  .qcard{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:28px;box-shadow:var(--shadow-sm);animation:pop .35s both}
+  .qcard .qnum{font-weight:800;color:var(--primary);font-size:13px;letter-spacing:1px;text-transform:uppercase}
+  .qcard h2{font-size:24px;margin:8px 0 22px;letter-spacing:-.3px;line-height:1.25}
+  .opts{display:flex;flex-direction:column;gap:12px}
+  .opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px 18px;border-radius:var(--r-sm);
+    background:#FFFBF6;border:2px solid var(--line-strong);font-weight:700;font-size:16px;color:var(--ink);
+    transition:transform .1s,border-color .12s,background .12s}
+  .opt:hover:not(:disabled){border-color:var(--primary);transform:translateX(2px)}
+  .opt .key{width:30px;height:30px;flex:none;border-radius:9px;background:#fff;border:2px solid var(--line-strong);
+    display:grid;place-items:center;font-family:"Baloo 2";font-weight:800;font-size:15px}
+  .opt.sel{border-color:var(--primary);background:#FFF0EC}
+  .opt.correct{border-color:var(--c4);background:#E9FBF3}
+  .opt.correct .key{background:var(--c4);border-color:var(--c4);color:#fff}
+  .opt.wrong{border-color:var(--primary);background:#FFEDEA}
+  .opt.wrong .key{background:var(--primary);border-color:var(--primary);color:#fff}
+  .opt:disabled{cursor:default}
+  .explain{margin-top:18px;padding:15px 17px;border-radius:var(--r-sm);background:#FFF7E8;border:1.5px solid #F4DCA8;
+    font-weight:600;color:#7A5A12;animation:pop .3s both}
+  .explain b{font-family:"Baloo 2"}
+  .qfoot{display:flex;justify-content:space-between;align-items:center;margin-top:24px;gap:12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:14px 26px;border-radius:999px;
+    font-family:"Baloo 2";font-weight:700;font-size:16px;background:var(--primary);color:#fff;
+    box-shadow:0 5px 0 0 #DE493D;transition:transform .1s,box-shadow .1s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 0 #DE493D}
+  .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line-strong);box-shadow:var(--shadow-sm)}
+  .btn.teal{background:var(--teal);box-shadow:0 5px 0 0 #0E7E75}
+  .btn.teal:active{box-shadow:0 2px 0 0 #0E7E75}
+  .btn.sm{padding:9px 16px;font-size:14px;box-shadow:none}
+  .btn[disabled]{opacity:.45;cursor:not-allowed;transform:none;box-shadow:0 5px 0 0 #DE493D}
+
+  /* RESULT */
+  .result{max-width:560px;margin:0 auto;text-align:center;background:var(--surface);border:1.5px solid var(--line);
+    border-radius:var(--r);padding:40px 30px;box-shadow:var(--shadow);animation:pop .4s both}
+  .scoreRing{width:150px;height:150px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;
+    font-family:"Baloo 2";color:#fff;position:relative}
+  .scoreRing b{font-size:46px;line-height:1}
+  .scoreRing small{font-size:14px;font-weight:700;opacity:.9}
+  .result h2{font-size:30px;margin-bottom:6px}
+  .result p{color:var(--ink-soft);font-weight:600;margin:0 0 22px}
+  .review{margin-top:26px;text-align:left}
+  .review h4{font-size:16px;margin-bottom:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1px;font-size:12px}
+  .rev{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .rev .dot{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px}
+  .rev .dot.ok{background:var(--c4)} .rev .dot.no{background:var(--primary)}
+  .rev .t{font-weight:700;font-size:15px}
+  .rev .a{font-size:13px;color:var(--ink-soft);font-weight:600;margin-top:2px}
+
+  /* ADMIN */
+  .admin-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:24px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
+  .panel{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm);
+    margin-bottom:16px;overflow:hidden;animation:pop .35s both}
+  .panel-head{display:flex;align-items:center;gap:13px;padding:16px 18px}
+  .panel-head .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;flex:none}
+  .panel-head .tt{flex:1;min-width:0}
+  .panel-head .tt h3{font-size:19px;letter-spacing:-.2px}
+  .panel-head .tt .m{font-size:12px;font-weight:800;color:var(--ink-soft)}
+  .iconbtn{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:16px;
+    background:#FFFBF6;border:1.5px solid var(--line-strong);transition:background .12s,transform .1s}
+  .iconbtn:hover{background:#fff;transform:translateY(-1px)}
+  .iconbtn.danger:hover{background:#FFEDEA;border-color:var(--primary)}
+  .iconbtn.shared{background:#E9FBF3;border-color:#9FE7CC}
+  .sharebadge{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+    color:#0B7A52;background:#E9FBF3;border:1.5px solid #9FE7CC;padding:1px 7px;border-radius:999px;margin-left:8px;vertical-align:middle}
+  .shareurl{display:flex;gap:9px;margin-top:8px}
+  .shareurl input{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+  .arg-list{padding:0 18px 14px}
+  .arg{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--r-sm);
+    margin-top:9px;background:#FFFCF8}
+  .arg .nm{flex:1;font-weight:800;font-size:15px}
+  .arg .cnt{font-size:12px;font-weight:800;color:var(--ink-soft);background:#fff;border:1.5px solid var(--line-strong);
+    padding:3px 10px;border-radius:999px}
+  .add-arg{display:flex;gap:9px;margin-top:12px}
+
+  input.fld,textarea.fld,select.fld{width:100%;padding:13px 15px;border-radius:var(--r-sm);border:1.5px solid var(--line-strong);
+    background:#FFFCF8;font-family:inherit;font-weight:600;font-size:15px;color:var(--ink);outline:none;transition:border-color .12s}
+  input.fld:focus,textarea.fld:focus{border-color:var(--primary);background:#fff}
+  textarea.fld{resize:vertical;font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.5;min-height:240px}
+  label.lab{display:block;font-weight:800;font-size:13px;margin:0 0 7px;color:var(--ink)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > *{flex:1;min-width:140px}
+
+  .swatches{display:flex;gap:9px;flex-wrap:wrap}
+  .sw{width:34px;height:34px;border-radius:11px;cursor:pointer;border:3px solid transparent;transition:transform .1s}
+  .sw:hover{transform:scale(1.1)}
+  .sw.on{border-color:var(--ink);transform:scale(1.12)}
+  .emo-pick{display:flex;gap:8px;flex-wrap:wrap}
+  .emo{width:40px;height:40px;border-radius:11px;font-size:21px;background:#FFFBF6;border:2px solid var(--line-strong);
+    display:grid;place-items:center;cursor:pointer}
+  .emo.on{border-color:var(--primary);background:#FFF0EC}
+
+  /* MODAL */
+  .overlay{position:fixed;inset:0;background:rgba(46,42,50,.4);backdrop-filter:blur(3px);z-index:60;
+    display:grid;place-items:center;padding:20px;animation:fade .2s both}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{background:var(--surface);border-radius:24px;width:min(640px,100%);max-height:88vh;overflow:auto;
+    box-shadow:0 30px 70px -30px rgba(46,42,50,.6);animation:pop .3s both;border:1.5px solid var(--line)}
+  .modal-head{display:flex;align-items:center;gap:12px;padding:20px 22px 6px}
+  .modal-head h3{font-size:22px;flex:1}
+  .modal-body{padding:14px 22px 8px}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px 22px}
+  .hint{font-size:13px;color:var(--ink-soft);font-weight:600;line-height:1.55}
+  .hint code{background:#FFF1E3;padding:2px 6px;border-radius:6px;font-size:12px;color:#9C5A12;font-weight:700}
+  .codeblock{background:#2E2A32;color:#FFE9D6;border-radius:14px;padding:14px 16px;font-family:ui-monospace,Menlo,monospace;
+    font-size:12.5px;line-height:1.6;overflow:auto;margin:10px 0;white-space:pre}
+  .err{background:#FFEDEA;border:1.5px solid var(--primary);color:var(--primary-ink);padding:11px 14px;border-radius:12px;
+    font-weight:700;font-size:13.5px;margin-top:10px;display:none}
+  .err.show{display:block;animation:pop .25s both}
+  .ok-note{background:#E9FBF3;border:1.5px solid var(--c4);color:#0B7A52;padding:11px 14px;border-radius:12px;
+    font-weight:700;font-size:13.5px;margin-top:10px;display:none}
+  .ok-note.show{display:block;animation:pop .25s both}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:80;
+    background:var(--ink);color:#fff;padding:13px 22px;border-radius:999px;font-weight:800;font-size:14px;
+    box-shadow:var(--shadow);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* confetti */
+  .confetti{position:fixed;width:11px;height:11px;top:-20px;z-index:90;border-radius:2px;pointer-events:none}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.9}}
+
+  .navright{display:flex;align-items:center;gap:10px}
+  .userchip{display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid var(--line-strong);
+    padding:5px 6px 5px 12px;border-radius:999px}
+  .userchip .ava{width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;display:grid;
+    place-items:center;font-family:"Baloo 2";font-weight:800;font-size:15px}
+  .userchip .em{font-weight:800;font-size:13px;color:var(--ink);max-width:150px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .userchip .logout{padding:7px 13px;border-radius:999px;font-weight:800;font-size:13px;background:#FFF1EF;
+    color:var(--primary-ink);border:1.5px solid #FAD3CD}
+  .userchip .logout:hover{background:#FFE4DF}
+  @media(max-width:620px){.userchip .em{display:none}}
+
+  .authwrap{min-height:64vh;display:grid;place-items:center;padding:24px 0}
+  .authcard{width:min(420px,100%);background:var(--surface);border:1.5px solid var(--line);border-radius:26px;
+    box-shadow:var(--shadow);padding:36px 30px;text-align:center;animation:pop .4s both}
+  .authlogo{width:58px;height:58px;border-radius:17px;background:var(--primary);color:#fff;font-family:"Baloo 2";
+    font-weight:800;font-size:30px;display:grid;place-items:center;margin:0 auto 16px;transform:rotate(-4deg);
+    box-shadow:0 7px 0 0 #E0473B}
+  .authcard h1{font-size:28px;letter-spacing:-.4px}
+  .authsub{color:var(--ink-soft);font-weight:600;margin:7px 0 22px;font-size:14.5px}
+  .authcard .lab{text-align:left}
+  .authcard .err{text-align:left}
+  .authswitch{margin:16px 0 0;font-weight:700;font-size:14px;color:var(--ink-soft)}
+  .authswitch a{color:var(--teal);font-weight:800;cursor:pointer;margin-left:4px}
+  .authswitch a:hover{text-decoration:underline}
+
+  footer{text-align:center;color:var(--ink-soft);font-weight:700;font-size:13px;padding:30px 0 40px}
+  @media(max-width:560px){
+    .qcard,.result{padding:22px 18px}
+    .hero h1{font-size:30px}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="brand" id="brandBtn">
+      <div class="logo">Q</div>
+      <div><b>QuizLab</b><span>impara giocando</span></div>
+    </div>
+    <div class="spacer"></div>
+    <div id="navRight" class="navright"></div>
+  </div>
+</header>
+
+<main id="app" class="wrap pagepad"></main>
+
+<footer id="foot">Fatto con 🧡 — i tuoi quiz vengono salvati automaticamente.</footer>
+
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ====================== ACCOUNT + API ======================
+   App multi-utente. Ogni utente accede e vede solo i propri quiz,
+   salvati sul server (database) tramite le funzioni in /api.
+*/
+const TOKEN_KEY = 'quizlab:token';
+const EMAIL_KEY = 'quizlab:email';
+
+let data = { materie: [] };
+let settings = {};
+
+const Auth = {
+  token: lsGet(TOKEN_KEY),
+  email: lsGet(EMAIL_KEY),
+  save(token, email){ this.token=token; this.email=email; lsSet(TOKEN_KEY,token); lsSet(EMAIL_KEY,email); },
+  clear(){ this.token=null; this.email=null; lsDel(TOKEN_KEY); lsDel(EMAIL_KEY); }
+};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+async function api(path, method='GET', body){
+  const headers = { 'Content-Type':'application/json' };
+  if(Auth.token) headers['Authorization'] = 'Bearer ' + Auth.token;
+  const r = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let j = null; try{ j = await r.json(); }catch(e){}
+  return { ok:r.ok, status:r.status, data:j };
+}
+
+async function loadData(){
+  const r = await api('/api/data');
+  if(r.status === 401){ Auth.clear(); return false; }
+  if(!r.ok || !r.data){ throw new Error((r.data && r.data.error) || 'Errore di caricamento'); }
+  data = { materie: Array.isArray(r.data.materie) ? r.data.materie : [] };
+  settings = (r.data.settings && typeof r.data.settings === 'object') ? r.data.settings : {};
+  myShares = {};
+  (r.data.shares || []).forEach(s => { myShares[s.argomento_id] = s.token; });
+  return true;
+}
+async function persist(){ await api('/api/data', 'PUT', { materie:data.materie, settings }); }
+async function saveData(){ await persist(); }
+async function saveSettings(){ await persist(); }
+
+function updateFooter(){
+  const f = document.getElementById('foot'); if(!f) return;
+  f.textContent = Auth.token
+    ? 'Connesso come ' + (Auth.email||'') + ' — i tuoi quiz sono salvati sul tuo account. 🧡'
+    : 'Fatto con 🧡 — accedi per creare e salvare i tuoi quiz.';
+}
+
+function updateHeader(){
+  const el = document.getElementById('navRight'); if(!el) return;
+  if(!Auth.token){ el.innerHTML=''; return; }
+  const initial = (Auth.email || '?').trim().charAt(0).toUpperCase() || '?';
+  el.innerHTML =
+    `<button class="nav-btn ${view!=='admin'?'active':''}" onclick="go('home')">📚 Studia</button>
+     <button class="nav-btn admin ${view==='admin'?'active':''}" onclick="goAdmin()">✏️ I miei quiz</button>
+     <div class="userchip" title="${esc(Auth.email||'')}">
+       <span class="ava">${esc(initial)}</span>
+       <span class="em">${esc(Auth.email||'')}</span>
+       <button class="logout" onclick="logout()">Esci</button>
+     </div>`;
+}
+
+function logout(){
+  Auth.clear();
+  data = { materie: [] }; settings = {};
+  view = 'home'; quiz = null;
+  renderAuth();
+}
+
+const PALETTE = ['#FF6B5E','#FF9F45','#F4C430','#3DD6A0','#17A398','#4DA6FF','#8A7BFF','#FF7EB6'];
+const EMOJIS  = ['📐','🧪','🌍','📜','🎨','🎵','💻','🧬','📖','🔢','⚖️','🗣️','🩺','🏛️','🌱','⭐'];
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function tint(hex){ // soft background tint of a color
+  const n = hex.replace('#',''); const r=parseInt(n.slice(0,2),16),g=parseInt(n.slice(2,4),16),b=parseInt(n.slice(4,6),16);
+  const m=.86; return `rgb(${Math.round(r+(255-r)*m)},${Math.round(g+(255-g)*m)},${Math.round(b+(255-b)*m)})`;
+}
+
+/* ---------- schermata di accesso / registrazione ---------- */
+let authMode = 'login';
+function renderAuth(){
+  updateHeader(); updateFooter();
+  app.innerHTML = `<div class="authwrap"><div class="authcard">
+      <div class="authlogo">Q</div>
+      <h1>${authMode==='login' ? 'Bentornato!' : 'Crea il tuo account'}</h1>
+      <p class="authsub">${authMode==='login'
+        ? 'Accedi per vedere e creare i tuoi quiz.'
+        : 'Registrati per iniziare a creare i tuoi quiz.'}</p>
+      <label class="lab">Email</label>
+      <input class="fld" id="auEmail" type="email" placeholder="tu@esempio.it" autocomplete="email" value="${esc(Auth.email||'')}">
+      <label class="lab" style="margin-top:14px">Password</label>
+      <input class="fld" id="auPass" type="password" placeholder="almeno 6 caratteri" autocomplete="${authMode==='login'?'current-password':'new-password'}">
+      <div class="err" id="auErr"></div>
+      <button class="btn" id="auBtn" style="width:100%;margin-top:18px;box-shadow:none" onclick="submitAuth()">${authMode==='login'?'Accedi':'Registrati'}</button>
+      <p class="authswitch">${authMode==='login'?'Non hai un account?':'Hai già un account?'}
+        <a onclick="toggleAuth()">${authMode==='login'?'Registrati':'Accedi'}</a></p>
+    </div></div>`;
+  setTimeout(()=>{ const e=$('#auEmail'); if(e && !e.value) e.focus(); else { const p=$('#auPass'); if(p) p.focus(); } },50);
+  const onEnter = e=>{ if(e.key==='Enter') submitAuth(); };
+  $('#auEmail').addEventListener('keydown', onEnter);
+  $('#auPass').addEventListener('keydown', onEnter);
+}
+function toggleAuth(){ authMode = authMode==='login' ? 'register' : 'login'; renderAuth(); }
+async function submitAuth(){
+  const email = $('#auEmail').value.trim();
+  const password = $('#auPass').value;
+  if(!email || !password){ showErr('#auErr','Inserisci email e password.'); return; }
+  const btn = $('#auBtn'); const label = authMode==='login'?'Accedi':'Registrati';
+  btn.disabled = true; btn.textContent = 'Attendere…';
+  try{
+    const r = await api(authMode==='login' ? '/api/login' : '/api/register', 'POST', { email, password });
+    if(!r.ok){ showErr('#auErr', (r.data && r.data.error) || 'Operazione non riuscita.'); btn.disabled=false; btn.textContent=label; return; }
+    Auth.save(r.data.token, r.data.email);
+    await loadData();
+    view = 'home'; render();
+  }catch(e){
+    showErr('#auErr','Server non raggiungibile. In locale avvia con "vercel dev"; una volta su Vercel funzionerà.');
+    btn.disabled=false; btn.textContent=label;
+  }
+}
+
+function seed(){
+  return { materie: [
+    { id:uid(), nome:'Matematica', emoji:'📐', color:'#4DA6FF', argomenti:[
+      { id:uid(), nome:'Operazioni di base', domande:[
+        { domanda:'Quanto fa 7 × 8?', opzioni:['54','56','63','48'], corretta:1, spiegazione:'7 × 8 = 56.' },
+        { domanda:'Qual è il risultato di 144 ÷ 12?', opzioni:['11','13','12','14'], corretta:2, spiegazione:'12 × 12 = 144, quindi 144 ÷ 12 = 12.' },
+        { domanda:'Quanto fa 25% di 200?', opzioni:['25','40','50','75'], corretta:2, spiegazione:'Il 25% è un quarto: 200 ÷ 4 = 50.' }
+      ]}
+    ]},
+    { id:uid(), nome:'Geografia', emoji:'🌍', color:'#3DD6A0', argomenti:[
+      { id:uid(), nome:'Capitali europee', domande:[
+        { domanda:'Qual è la capitale della Francia?', opzioni:['Lione','Marsiglia','Parigi','Nizza'], corretta:2, spiegazione:'Parigi è la capitale della Francia.' },
+        { domanda:'Qual è la capitale del Portogallo?', opzioni:['Porto','Lisbona','Madrid','Faro'], corretta:1, spiegazione:'La capitale è Lisbona.' }
+      ]}
+    ]}
+  ]};
+}
+
+/* ====================== STATE / ROUTER ====================== */
+let view = 'home';        // home | materia | quiz | admin
+let curMateria = null;    // id
+let curArg = null;        // id
+let quiz = null;          // {qs, idx, answers[], locked}
+let publicMode = false;   // true quando si apre un quiz da link pubblico
+let myShares = {};        // argomento_id -> token del link pubblico
+
+const app = document.getElementById('app');
+const $ = s => document.querySelector(s);
+
+function findMateria(id){ return data.materie.find(m=>m.id===id); }
+function findArg(m,id){ return m && m.argomenti.find(a=>a.id===id); }
+function countQ(m){ return m.argomenti.reduce((s,a)=>s+a.domande.length,0); }
+
+function go(v){ view=v; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+function render(){
+  if(publicMode){ return; }
+  if(!Auth.token){ return renderAuth(); }
+  updateHeader(); updateFooter();
+  if(view==='home') return renderHome();
+  if(view==='materia') return renderMateria();
+  if(view==='quiz') return renderQuiz();
+  if(view==='admin') return renderAdmin();
+}
+
+/* ====================== HOME ====================== */
+function renderHome(){
+  const total = data.materie.length;
+  let cards = '';
+  if(total===0){
+    app.innerHTML = heroHTML('Benvenuto in QuizLab','Non c’è ancora nessuna materia. Passa alla sezione Admin per crearne una!')
+      + `<div class="empty"><div class="big">🗂️</div><h3>Nessuna materia</h3>
+         <p>Crea la tua prima materia e aggiungi i quiz in formato JSON.</p>
+         <button class="btn teal" onclick="openAdmin()">🔧 Vai all'area Admin</button></div>`;
+    return;
+  }
+  data.materie.forEach((m,i)=>{
+    cards += `<div class="card" style="animation-delay:${i*55}ms" onclick="openMateria('${m.id}')">
+      <div class="corner" style="background:${m.color}"></div>
+      <div class="ic" style="background:${tint(m.color)};color:${m.color}">${m.emoji||'📘'}</div>
+      <h3>${esc(m.nome)}</h3>
+      <div class="meta">${m.argomenti.length} argoment${m.argomenti.length===1?'o':'i'} · ${countQ(m)} domande</div>
+      <div class="go" style="color:${m.color}">Inizia →</div>
+    </div>`;
+  });
+  app.innerHTML = heroHTML('Scegli una materia', 'Seleziona la materia che vuoi studiare e mettiti alla prova con i quiz.')
+    + `<div class="grid">${cards}</div>`;
+}
+
+function heroHTML(title, sub){
+  return `<div class="hero"><div>
+      <span class="pill">✨ ${data.materie.length} materie disponibili</span>
+      <h1 style="margin-top:14px">${title}</h1><p>${sub}</p>
+    </div></div>`;
+}
+
+/* ====================== MATERIA (argomenti) ====================== */
+function renderMateria(){
+  const m = findMateria(curMateria);
+  if(!m){ return go('home'); }
+  let cards='';
+  if(m.argomenti.length===0){
+    cards = `<div class="empty"><div class="big">📭</div><h3>Nessun argomento</h3>
+      <p>Questa materia non ha ancora argomenti. Aggiungili dall'area Admin.</p>
+      <button class="btn teal" onclick="openAdmin()">🔧 Apri Admin</button></div>`;
+  } else {
+    m.argomenti.forEach((a,i)=>{
+      const empty = a.domande.length===0;
+      cards += `<div class="card" style="animation-delay:${i*55}ms;${empty?'opacity:.6':''}"
+          onclick="${empty?`toast('Questo argomento non ha ancora domande')`:`startQuiz('${a.id}')`}">
+        <div class="corner" style="background:${m.color}"></div>
+        <div class="ic" style="background:${tint(m.color)};color:${m.color}">${a.domande.length||'·'}</div>
+        <h3>${esc(a.nome)}</h3>
+        <div class="meta">${a.domande.length} domande</div>
+        <div class="go" style="color:${m.color}">${empty?'Vuoto':'Fai il quiz →'}</div>
+      </div>`;
+    });
+  }
+  app.innerHTML = crumbs([['Materie',"go('home')"]], m.nome)
+    + `<div class="hero"><div>
+        <span class="pill" style="color:${m.color}">${m.emoji} ${esc(m.nome)}</span>
+        <h1 style="margin-top:14px">Scegli un argomento</h1>
+        <p>${countQ(m)} domande in totale, suddivise in ${m.argomenti.length} argomenti.</p>
+      </div></div>
+      <div class="grid">${cards}</div>`;
+}
+
+/* ====================== QUIZ ====================== */
+function startQuiz(argId){
+  const m = findMateria(curMateria); const a = findArg(m, argId);
+  if(!a || a.domande.length===0) return;
+  curArg = argId;
+  quiz = { qs:a.domande, idx:0, answers:new Array(a.domande.length).fill(null), locked:false,
+           color:m.color, title:a.nome, subtitle:m.nome, emoji:m.emoji, materiaId:m.id, argId, public:false };
+  go('quiz');
+}
+function startPublicQuiz(pq){
+  quiz = { qs:pq.domande, idx:0, answers:new Array(pq.domande.length).fill(null), locked:false,
+           color:pq.color||'#FF6B5E', title:pq.title, subtitle:pq.subtitle, emoji:pq.emoji||'📘', public:true };
+  publicMode = true;
+  renderQuiz();
+}
+function restartQuiz(){ quiz.idx=0; quiz.answers=new Array(quiz.qs.length).fill(null); quiz.locked=false; renderQuiz(); }
+
+function renderQuiz(){
+  if(!quiz){ return go('home'); }
+  if(quiz.idx >= quiz.qs.length){ return renderResult(); }
+  const q = quiz.qs[quiz.idx];
+  const picked = quiz.answers[quiz.idx];
+  const pct = Math.round((quiz.idx)/quiz.qs.length*100);
+  const keys=['A','B','C','D','E','F'];
+
+  let opts='';
+  q.opzioni.forEach((o,i)=>{
+    let cls='opt';
+    if(quiz.locked){
+      if(i===q.corretta) cls+=' correct';
+      else if(i===picked) cls+=' wrong';
+    } else if(i===picked) cls+=' sel';
+    opts += `<button class="${cls}" ${quiz.locked?'disabled':''} onclick="pick(${i})">
+      <span class="key">${keys[i]}</span><span>${esc(o)}</span></button>`;
+  });
+
+  const expl = (quiz.locked && q.spiegazione)
+    ? `<div class="explain"><b>${picked===q.corretta?'Esatto! ✅':'Non proprio 🔍'}</b> — ${esc(q.spiegazione)}</div>` : '';
+
+  const footRight = quiz.locked
+    ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">${quiz.idx+1<quiz.qs.length?'Avanti →':'Vedi risultato 🎉'}</button>`
+    : `<button class="btn" id="confirmBtn" style="background:${quiz.color};box-shadow:none" ${picked===null?'disabled':''} onclick="confirmAns()">Conferma</button>`;
+
+  const top = quiz.public
+    ? `<div class="crumbs"><span>${quiz.emoji} ${esc(quiz.subtitle)} › ${esc(quiz.title)}</span></div>`
+    : crumbs([['Materie',"go('home')"],[quiz.subtitle,`openMateria('${quiz.materiaId}')`]], quiz.title);
+
+  app.innerHTML = top
+    + `<div class="quizbox">
+        <div class="progress"><i style="width:${pct}%"></i></div>
+        <div class="qcount">Domanda ${quiz.idx+1} di ${quiz.qs.length}</div>
+        <div class="qcard">
+          <div class="qnum">${esc(quiz.title)}</div>
+          <h2>${esc(q.domanda)}</h2>
+          <div class="opts">${opts}</div>
+          ${expl}
+          <div class="qfoot">
+            <button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
+            ${footRight}
+          </div>
+        </div>
+      </div>`;
+}
+
+function pick(i){ if(quiz.locked) return; quiz.answers[quiz.idx]=i; renderQuiz(); }
+function confirmAns(){ if(quiz.answers[quiz.idx]===null) return; quiz.locked=true; renderQuiz(); }
+function next(){ quiz.idx++; quiz.locked=false; renderQuiz(); }
+function quitQuiz(){
+  if(quiz && quiz.public){ leavePublic(); return; }
+  confirmModal('Uscire dal quiz?','I progressi di questo quiz andranno persi.','Esci',()=>{ closeModal(); openMateria(curMateria); });
+}
+
+function renderResult(){
+  let correct=0;
+  quiz.qs.forEach((q,i)=>{ if(quiz.answers[i]===q.corretta) correct++; });
+  const tot=quiz.qs.length, pct=Math.round(correct/tot*100);
+  const ringColor = pct>=80? '#3DD6A0' : pct>=50? '#FF9F45' : '#FF6B5E';
+  const msg = pct>=80? 'Fantastico! Conosci bene l’argomento. 🌟' : pct>=50? 'Bel lavoro, ma puoi migliorare! 💪' : 'Niente paura, riprova e andrà meglio! 🔁';
+
+  let rev='';
+  quiz.qs.forEach((q,i)=>{
+    const ok = quiz.answers[i]===q.corretta;
+    const yourAns = quiz.answers[i]!=null ? q.opzioni[quiz.answers[i]] : '—';
+    rev += `<div class="rev"><div class="dot ${ok?'ok':'no'}">${ok?'✓':'✕'}</div>
+      <div><div class="t">${esc(q.domanda)}</div>
+      <div class="a">${ok? 'Risposta corretta: '+esc(q.opzioni[q.corretta]) : 'Tu: '+esc(yourAns)+' · Corretta: '+esc(q.opzioni[q.corretta])}</div></div></div>`;
+  });
+
+  const actions = quiz.public
+    ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">🔁 Riprova</button>
+       <button class="btn teal" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`
+    : `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">🔁 Riprova</button>
+       <button class="btn ghost" onclick="openMateria('${quiz.materiaId}')">← Altri argomenti</button>`;
+
+  app.innerHTML = `<div class="result">
+      <div class="scoreRing" style="background:${ringColor}"><div><b>${pct}%</b><br><small>${correct}/${tot} corrette</small></div></div>
+      <h2>${pct>=80?'Ottimo!':pct>=50?'Ben fatto!':'Quasi!'}</h2>
+      <p>${msg}</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${actions}</div>
+      <div class="review"><h4>Riepilogo risposte</h4>${rev}</div>
+    </div>`;
+  if(pct>=80) confetti();
+}
+
+/* ====================== MODALITÀ PUBBLICA (link condiviso) ====================== */
+async function bootPublic(token){
+  publicMode = true;
+  const nav = document.getElementById('navRight');
+  if(nav) nav.innerHTML = `<button class="nav-btn" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`;
+  const foot = document.getElementById('foot');
+  if(foot) foot.textContent = 'Quiz condiviso con QuizLab 🧡 — crea i tuoi gratis.';
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px"><span class="pill">Carico il quiz… ⏳</span></div>`;
+  try{
+    const r = await fetch('/api/public?token=' + encodeURIComponent(token), {cache:'no-store'});
+    let j = null; try{ j = await r.json(); }catch(e){}
+    if(!r.ok || !j){ return renderPublicError((j && j.error) || 'Quiz non disponibile.'); }
+    startPublicQuiz(j);
+  }catch(e){
+    renderPublicError('Server non raggiungibile. Una volta su Vercel funzionerà.');
+  }
+}
+function leavePublic(){ window.location.href = location.pathname; } // toglie ?q= e torna all'app
+function renderPublicError(msg){
+  app.innerHTML = `<div class="empty" style="max-width:520px;margin:48px auto"><div class="big">🔗</div>
+    <h3>Ops!</h3><p>${esc(msg)}</p>
+    <button class="btn teal" onclick="leavePublic()">✨ Crea i tuoi quiz</button></div>`;
+}
+function goAdmin(){ go('admin'); }
+function openAdmin(){ go('admin'); }  // alias usato in alcuni pulsanti
+
+function renderAdmin(){
+  let panels='';
+  data.materie.forEach((m,i)=>{
+    let args='';
+    m.argomenti.forEach(a=>{
+      const shared = !!myShares[a.id];
+      const shareBtn = a.domande.length>0
+        ? `<button class="iconbtn ${shared?'shared':''}" title="${shared?'Condiviso — gestisci link':'Condividi con un link'}" onclick="shareArg('${m.id}','${a.id}')">🔗</button>`
+        : '';
+      args += `<div class="arg">
+        <span class="nm">${esc(a.nome)}${shared?' <span class="sharebadge" title="Quiz condiviso pubblicamente">link attivo</span>':''}</span>
+        <span class="cnt">${a.domande.length} dom.</span>
+        ${shareBtn}
+        <button class="iconbtn" title="Modifica domande (JSON)" onclick="editQuestions('${m.id}','${a.id}')">📝</button>
+        <button class="iconbtn" title="Rinomina" onclick="renameArg('${m.id}','${a.id}')">✏️</button>
+        <button class="iconbtn danger" title="Elimina argomento" onclick="delArg('${m.id}','${a.id}')">🗑️</button>
+      </div>`;
+    });
+    panels += `<div class="panel" style="animation-delay:${i*40}ms">
+      <div class="panel-head">
+        <div class="ic" style="background:${tint(m.color)};color:${m.color}">${m.emoji}</div>
+        <div class="tt"><h3>${esc(m.nome)}</h3><div class="m">${m.argomenti.length} argomenti · ${countQ(m)} domande</div></div>
+        <button class="iconbtn" title="Modifica materia" onclick="editMateria('${m.id}')">✏️</button>
+        <button class="iconbtn danger" title="Elimina materia" onclick="delMateria('${m.id}')">🗑️</button>
+      </div>
+      <div class="arg-list">
+        ${args || '<p class="hint" style="margin:4px 0">Nessun argomento ancora.</p>'}
+        <div class="add-arg">
+          <input class="fld" id="newarg_${m.id}" placeholder="Nuovo argomento…">
+          <button class="btn teal sm" onclick="addArg('${m.id}')" style="flex:none">+ Aggiungi</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  if(data.materie.length===0) panels = `<div class="empty"><div class="big">🧰</div><h3>Pannello vuoto</h3>
+    <p>Crea la tua prima materia per iniziare.</p></div>`;
+
+  app.innerHTML = `<div class="admin-head">
+      <div><span class="pill" style="color:var(--teal)">✏️ I miei quiz</span>
+      <h1 style="margin-top:12px">Crea e gestisci i tuoi quiz</h1></div>
+      <div class="toolbar">
+        <button class="btn teal sm" onclick="newMateria()">＋ Nuova materia</button>
+        <button class="btn ghost sm" onclick="importMateria()">📥 Importa JSON</button>
+        <button class="btn ghost sm" onclick="exportData()">📤 Esporta backup</button>
+      </div>
+    </div>${panels}`;
+}
+
+/* --- materie CRUD --- */
+function materiaForm(existing){
+  const m = existing || { nome:'', emoji:EMOJIS[0], color:PALETTE[0] };
+  const sw = PALETTE.map(c=>`<div class="sw ${c===m.color?'on':''}" data-c="${c}" style="background:${c}" onclick="selSwatch(this)"></div>`).join('');
+  const em = EMOJIS.map(e=>`<div class="emo ${e===m.emoji?'on':''}" data-e="${e}" onclick="selEmoji(this)">${e}</div>`).join('');
+  showModal(`<div class="modal-head"><h3>${existing?'Modifica materia':'Nuova materia'}</h3></div>
+    <div class="modal-body">
+      <label class="lab">Nome materia</label>
+      <input class="fld" id="mNome" value="${esc(m.nome)}" placeholder="es. Storia, Biologia…">
+      <label class="lab" style="margin-top:16px">Icona</label>
+      <div class="emo-pick" id="emoPick">${em}</div>
+      <label class="lab" style="margin-top:16px">Colore</label>
+      <div class="swatches" id="swPick">${sw}</div>
+      <div class="err" id="mErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn teal" onclick="saveMateria('${existing?existing.id:''}')">Salva</button>
+    </div>`);
+  setTimeout(()=>$('#mNome').focus(),50);
+}
+let _selEmoji=null,_selColor=null;
+function selEmoji(el){ $('#emoPick').querySelectorAll('.emo').forEach(x=>x.classList.remove('on')); el.classList.add('on'); _selEmoji=el.dataset.e; }
+function selSwatch(el){ $('#swPick').querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); el.classList.add('on'); _selColor=el.dataset.c; }
+function newMateria(){ _selEmoji=EMOJIS[0]; _selColor=PALETTE[0]; materiaForm(null); }
+function editMateria(id){ const m=findMateria(id); _selEmoji=m.emoji; _selColor=m.color; materiaForm(m); }
+async function saveMateria(id){
+  const nome=$('#mNome').value.trim();
+  if(!nome){ showErr('#mErr','Inserisci un nome.'); return; }
+  if(id){ const m=findMateria(id); m.nome=nome; m.emoji=_selEmoji; m.color=_selColor; }
+  else { data.materie.push({ id:uid(), nome, emoji:_selEmoji, color:_selColor, argomenti:[] }); }
+  await saveData(); closeModal(); renderAdmin(); toast('Materia salvata ✅');
+}
+function delMateria(id){ const m=findMateria(id);
+  confirmModal('Eliminare la materia?',`"${m.nome}" e tutti i suoi ${countQ(m)} quiz verranno eliminati.`,'Elimina',async()=>{
+    data.materie=data.materie.filter(x=>x.id!==id); await saveData(); closeModal(); renderAdmin(); toast('Materia eliminata');
+  },true);
+}
+
+/* --- argomenti CRUD --- */
+async function addArg(mid){
+  const inp=$('#newarg_'+mid); const nome=inp.value.trim(); if(!nome) return;
+  findMateria(mid).argomenti.push({ id:uid(), nome, domande:[] });
+  await saveData(); renderAdmin(); toast('Argomento aggiunto ✅');
+}
+function renameArg(mid,aid){ const a=findArg(findMateria(mid),aid);
+  promptModal('Rinomina argomento', a.nome, async(v)=>{ if(v.trim()){ a.nome=v.trim(); await saveData(); renderAdmin(); } closeModal(); });
+}
+function delArg(mid,aid){ const a=findArg(findMateria(mid),aid);
+  confirmModal('Eliminare l’argomento?',`"${a.nome}" e le sue ${a.domande.length} domande verranno eliminate.`,'Elimina',async()=>{
+    const m=findMateria(mid); m.argomenti=m.argomenti.filter(x=>x.id!==aid); await saveData(); closeModal(); renderAdmin(); toast('Argomento eliminato');
+  },true);
+}
+
+/* --- condivisione con link pubblico --- */
+function shareUrl(token){ return location.origin + location.pathname + '?q=' + token; }
+
+async function shareArg(mid,aid){
+  const m=findMateria(mid); const a=findArg(m,aid);
+  if(!a || a.domande.length===0){ toast('Aggiungi prima qualche domanda'); return; }
+  // mostra subito il modale in caricamento
+  shareModalView({state:'loading', nome:a.nome});
+  if(myShares[aid]){ return shareModalView({state:'active', nome:a.nome, aid, token:myShares[aid]}); }
+  const r = await api('/api/share','POST',{ materia_id:mid, argomento_id:aid, title:a.nome, emoji:m.emoji, color:m.color });
+  if(!r.ok || !r.data || !r.data.token){ shareModalView({state:'error', nome:a.nome, msg:(r.data&&r.data.error)||'Operazione non riuscita.'}); return; }
+  myShares[aid] = r.data.token;
+  shareModalView({state:'active', nome:a.nome, aid, token:r.data.token});
+}
+
+function shareModalView(s){
+  let body;
+  if(s.state==='loading'){
+    body = `<div class="modal-body"><p class="hint">Preparo il link… ⏳</p></div>`;
+  } else if(s.state==='error'){
+    body = `<div class="modal-body"><div class="err show">${esc(s.msg)}</div></div>
+      <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`;
+  } else if(s.state==='off'){
+    body = `<div class="modal-body">
+        <p class="hint">La condivisione è disattivata. Il vecchio link non funziona più.</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" onclick="closeModal()">Chiudi</button>
+        <button class="btn teal" onclick="shareArg('${s.mid}','${s.aid}')">🔗 Riattiva link</button>
+      </div>`;
+  } else { // active
+    const url = shareUrl(s.token);
+    body = `<div class="modal-body">
+        <p class="hint">Chiunque abbia questo link può fare il quiz <b>"${esc(s.nome)}"</b>, senza registrarsi.
+        Le tue modifiche al quiz si aggiornano in automatico.</p>
+        <div class="shareurl">
+          <input class="fld" id="shareUrlInput" readonly value="${esc(url)}" onclick="this.select()">
+          <button class="btn teal sm" onclick="copyShare()" style="flex:none">Copia</button>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn ghost sm" href="${esc(url)}" target="_blank" rel="noopener">↗ Apri il quiz</a>
+          <button class="btn ghost sm" style="color:var(--primary-ink);border-color:#FAD3CD"
+            onclick="revokeShare('${findArgMateria(s.aid)}','${s.aid}')">🚫 Disattiva link</button>
+        </div>
+      </div>
+      <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Fatto</button></div>`;
+  }
+  showModal(`<div class="modal-head"><h3>🔗 Condividi il quiz</h3></div>${body}`);
+}
+
+function findArgMateria(aid){
+  for(const m of data.materie){ if(m.argomenti.some(a=>a.id===aid)) return m.id; }
+  return '';
+}
+
+function copyShare(){
+  const inp=document.getElementById('shareUrlInput'); if(!inp) return;
+  const url=inp.value;
+  const done=()=>toast('Link copiato ✅');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(()=>{ inp.select(); document.execCommand('copy'); done(); });
+  } else { inp.select(); document.execCommand('copy'); done(); }
+}
+
+async function revokeShare(mid,aid){
+  const token=myShares[aid]; if(!token) return;
+  const r = await api('/api/share?token='+encodeURIComponent(token),'DELETE');
+  if(!r.ok){ toast('⚠️ Non riuscito'); return; }
+  delete myShares[aid];
+  renderAdmin();
+  shareModalView({state:'off', mid, aid});
+}
+
+/* --- editor domande JSON --- */
+const TEMPLATE = `[
+  {
+    "domanda": "Quanto fa 2 + 2?",
+    "opzioni": ["3", "4", "5", "22"],
+    "corretta": 1,
+    "spiegazione": "2 + 2 = 4. (campo facoltativo)"
+  },
+  {
+    "domanda": "Qual è la capitale d'Italia?",
+    "opzioni": ["Milano", "Roma", "Napoli"],
+    "corretta": 1
+  }
+]`;
+
+function editQuestions(mid,aid){
+  const a=findArg(findMateria(mid),aid);
+  const current = a.domande.length ? JSON.stringify(a.domande,null,2) : TEMPLATE;
+  showModal(`<div class="modal-head"><h3>📝 Domande — ${esc(a.nome)}</h3></div>
+    <div class="modal-body">
+      <p class="hint">Incolla qui le domande in <b>JSON</b>. Ogni domanda ha: <code>domanda</code>, <code>opzioni</code> (lista), <code>corretta</code> (indice della risposta giusta, parte da <b>0</b>) e <code>spiegazione</code> (facoltativa).</p>
+      <details style="margin:8px 0"><summary class="hint" style="cursor:pointer;font-weight:800">Mostra esempio di formato</summary>
+        <div class="codeblock">${esc(TEMPLATE)}</div></details>
+      <textarea class="fld" id="jsonArea" spellcheck="false">${esc(current)}</textarea>
+      <div class="err" id="jErr"></div>
+      <div class="ok-note" id="jOk"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="loadTpl()">↺ Esempio</button>
+      <button class="btn ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn teal" onclick="saveQuestions('${mid}','${aid}')">💾 Salva domande</button>
+    </div>`);
+}
+function loadTpl(){ $('#jsonArea').value=TEMPLATE; $('#jErr').classList.remove('show'); }
+
+function validateQuestions(raw){
+  let arr;
+  try{ arr=JSON.parse(raw); }
+  catch(e){ return {error:'JSON non valido: '+e.message}; }
+  if(!Array.isArray(arr)) return {error:'Il JSON deve essere una lista [ … ] di domande.'};
+  for(let i=0;i<arr.length;i++){
+    const q=arr[i], n=i+1;
+    if(typeof q!=='object'||q===null) return {error:`Domanda ${n}: deve essere un oggetto { … }.`};
+    if(typeof q.domanda!=='string'||!q.domanda.trim()) return {error:`Domanda ${n}: campo "domanda" mancante o vuoto.`};
+    if(!Array.isArray(q.opzioni)||q.opzioni.length<2) return {error:`Domanda ${n}: "opzioni" deve avere almeno 2 voci.`};
+    if(q.opzioni.length>6) return {error:`Domanda ${n}: massimo 6 opzioni.`};
+    if(q.opzioni.some(o=>typeof o!=='string')) return {error:`Domanda ${n}: le opzioni devono essere testo.`};
+    if(!Number.isInteger(q.corretta)||q.corretta<0||q.corretta>=q.opzioni.length)
+      return {error:`Domanda ${n}: "corretta" deve essere un indice valido (0–${q.opzioni.length-1}).`};
+    if(q.spiegazione!==undefined && typeof q.spiegazione!=='string')
+      return {error:`Domanda ${n}: "spiegazione" deve essere testo.`};
+  }
+  // normalize
+  const clean = arr.map(q=>({ domanda:q.domanda.trim(), opzioni:q.opzioni.map(String),
+    corretta:q.corretta, ...(q.spiegazione?{spiegazione:q.spiegazione}:{}) }));
+  return {ok:clean};
+}
+async function saveQuestions(mid,aid){
+  const res=validateQuestions($('#jsonArea').value);
+  if(res.error){ showErr('#jErr',res.error); return; }
+  findArg(findMateria(mid),aid).domande=res.ok;
+  await saveData(); closeModal(); renderAdmin(); toast(`${res.ok.length} domande salvate ✅`);
+}
+
+/* --- import / export --- */
+function importMateria(){
+  const tpl=`{
+  "nome": "Scienze",
+  "emoji": "🧪",
+  "color": "#3DD6A0",
+  "argomenti": [
+    {
+      "nome": "Il corpo umano",
+      "domande": [
+        { "domanda": "Quante ossa ha un adulto?", "opzioni": ["106","206","306"], "corretta": 1 }
+      ]
+    }
+  ]
+}`;
+  showModal(`<div class="modal-head"><h3>📥 Importa una materia (JSON)</h3></div>
+    <div class="modal-body">
+      <p class="hint">Incolla una materia completa in JSON: <code>nome</code>, <code>emoji</code>, <code>color</code> e una lista di <code>argomenti</code> (ognuno con le sue <code>domande</code>).</p>
+      <details style="margin:8px 0"><summary class="hint" style="cursor:pointer;font-weight:800">Mostra esempio</summary><div class="codeblock">${esc(tpl)}</div></details>
+      <textarea class="fld" id="impArea" spellcheck="false" placeholder="Incolla qui il JSON…"></textarea>
+      <div class="err" id="impErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="$('#impArea').value=\`${tpl.replace(/`/g,'\\`')}\`">↺ Esempio</button>
+      <button class="btn ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn teal" onclick="doImport()">Importa</button>
+    </div>`);
+}
+async function doImport(){
+  let obj; try{ obj=JSON.parse($('#impArea').value); }catch(e){ showErr('#impErr','JSON non valido: '+e.message); return; }
+  const list = Array.isArray(obj)?obj:[obj];
+  for(const m of list){
+    if(!m.nome||typeof m.nome!=='string'){ showErr('#impErr','Ogni materia deve avere un "nome".'); return; }
+    const args=Array.isArray(m.argomenti)?m.argomenti:[];
+    for(const a of args){
+      if(!a.nome){ showErr('#impErr',`Materia "${m.nome}": un argomento è senza "nome".`); return; }
+      const res=validateQuestions(JSON.stringify(a.domande||[]));
+      if(res.error){ showErr('#impErr',`Materia "${m.nome}" › "${a.nome}": ${res.error}`); return; }
+      a._clean=res.ok;
+    }
+    data.materie.push({ id:uid(), nome:m.nome.trim(), emoji:m.emoji||'📘',
+      color:PALETTE.includes(m.color)?m.color:(m.color||PALETTE[0]),
+      argomenti:args.map(a=>({id:uid(),nome:a.nome.trim(),domande:a._clean})) });
+  }
+  await saveData(); closeModal(); renderAdmin(); toast('Importazione completata ✅');
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='quizlab-backup.json'; a.click(); URL.revokeObjectURL(url);
+  toast('Backup scaricato 📤');
+}
+
+/* ====================== MODALS / HELPERS ====================== */
+function showModal(html){ $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+function closeModal(){ $('#modalRoot').innerHTML=''; }
+function confirmModal(title,msg,okLabel,onOk,danger){
+  showModal(`<div class="modal-head"><h3>${title}</h3></div>
+    <div class="modal-body"><p class="hint">${msg}</p></div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Annulla</button>
+    <button class="btn" id="cfBtn" style="${danger?'background:var(--primary);box-shadow:0 5px 0 0 #DE493D':''}">${okLabel}</button></div>`);
+  $('#cfBtn').addEventListener('click',onOk);
+}
+function promptModal(title,val,onOk){
+  showModal(`<div class="modal-head"><h3>${title}</h3></div>
+    <div class="modal-body"><input class="fld" id="pmInput" value="${esc(val)}"></div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Annulla</button>
+    <button class="btn teal" id="pmBtn">Salva</button></div>`);
+  setTimeout(()=>$('#pmInput').focus(),50);
+  $('#pmBtn').addEventListener('click',()=>onOk($('#pmInput').value));
+  $('#pmInput').addEventListener('keydown',e=>{ if(e.key==='Enter') onOk($('#pmInput').value); });
+}
+function showErr(sel,msg){ const e=$(sel); e.textContent=msg; e.classList.add('show'); }
+
+let _toastT;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'),2200); }
+
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function crumbs(parents,current){
+  let h='<div class="crumbs">';
+  parents.forEach(([label,fn])=>{ h+=`<a onclick="${fn}">${esc(label)}</a><span class="sep">›</span>`; });
+  h+=`<span>${esc(current)}</span></div>`; return h;
+}
+
+function confetti(){
+  const colors=PALETTE;
+  for(let i=0;i<70;i++){
+    const c=document.createElement('div'); c.className='confetti';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.animation=`fall ${1.8+Math.random()*1.4}s ${Math.random()*0.5}s ease-in forwards`;
+    if(Math.random()>.5) c.style.borderRadius='50%';
+    document.body.appendChild(c); setTimeout(()=>c.remove(),3800);
+  }
+}
+
+/* navigation entry points */
+function openMateria(id){ curMateria=id; quiz=null; go('materia'); }
+
+/* ====================== INIT ====================== */
+$('#brandBtn').addEventListener('click',()=>{
+  if(publicMode){ leavePublic(); return; }
+  if(Auth.token) go('home'); else renderAuth();
+});
+
+(async ()=>{
+  // Link pubblico condiviso: ?q=TOKEN  → apri il quiz senza login
+  const qtoken = new URLSearchParams(location.search).get('q');
+  if(qtoken){ return bootPublic(qtoken); }
+
+  if(Auth.token){
+    try{
+      const loaded = await loadData();
+      if(loaded){ view='home'; render(); return; }
+    }catch(e){ /* sessione non valida o server non raggiungibile */ }
+  }
+  renderAuth();
+})();
+</script>
+</body>
+</html>
