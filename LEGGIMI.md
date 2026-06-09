@@ -61,10 +61,18 @@ vercel dev               # avvia in locale (di solito su http://localhost:3000)
 - **Studia:** scegli una materia → un argomento → fai il quiz → vedi il punteggio.
 - **I miei quiz:** crea materie, aggiungi argomenti e inserisci le domande in **JSON**.
   Puoi anche **importare** una materia intera ed **esportare** un backup.
+- **Modalità Esame:** in "I miei quiz", premi **🎓** su un argomento per trasformarlo in
+  esame con punteggio a pesi configurabili: percentuale per risposta **giusta**,
+  **sbagliata** (anche negativa, per penalizzare), **non data**, e una **soglia** di
+  superamento. In modalità esame si risponde a tutte le domande e si vede il voto solo
+  alla consegna (a meno che non attivi il feedback immediato). Gli esami compaiono in una
+  sezione dedicata e si possono condividere come gli altri quiz.
+
 - **Condividi un quiz:** in "I miei quiz", premi **🔗** accanto a un quiz per ottenere un
   **link pubblico**. Chiunque lo apra può fare quel quiz **senza registrarsi**. Le tue
   modifiche si aggiornano da sole, e puoi **disattivare** il link quando vuoi.
-  Il link ha la forma `https://tuosito.vercel.app/?q=...`.
+  Il link ha la forma `https://tuosito.vercel.app/?q=...`. Puoi anche condividere
+  un'**intera materia** (pulsante 🔗 sulla materia): chi apre sceglie l'argomento.
 
 ### Formato JSON delle domande
 

@@ -169,6 +169,13 @@
     color:#0B7A52;background:#E9FBF3;border:1.5px solid #9FE7CC;padding:1px 7px;border-radius:999px;margin-left:8px;vertical-align:middle}
   .shareurl{display:flex;gap:9px;margin-top:8px}
   .shareurl input{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+  .iconbtn.exam{background:#F1ECFF;border-color:#CFC2FF}
+  .exambadge{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+    color:#5B3FB8;background:#F1ECFF;border:1.5px solid #CFC2FF;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .secthead{font-size:15px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1.2px;margin:0 0 14px;font-family:"Baloo 2"}
+  .contrib{font-size:12px;font-weight:800;padding:1px 7px;border-radius:999px;background:#F0E4D6;color:var(--ink-soft);vertical-align:middle}
+  .contrib.pos{background:#E9FBF3;color:#0B7A52}
+  .contrib.neg{background:#FFEDEA;color:var(--primary-ink)}
   .arg-list{padding:0 18px 14px}
   .arg{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--r-sm);
     margin-top:9px;background:#FFFCF8}
@@ -483,26 +490,39 @@ function heroHTML(title, sub){
 }
 
 /* ====================== MATERIA (argomenti) ====================== */
+function argCard(m, a, i){
+  const empty = a.domande.length===0;
+  const isExam = !!(a.esame && a.esame.on);
+  const badge = isExam ? `<span class="exambadge">🎓 Esame</span>` : '';
+  return `<div class="card" style="animation-delay:${i*55}ms;${empty?'opacity:.6':''}"
+      onclick="${empty?`toast('Questo argomento non ha ancora domande')`:`startQuiz('${a.id}')`}">
+    <div class="corner" style="background:${m.color}"></div>
+    <div class="ic" style="background:${tint(m.color)};color:${m.color}">${isExam?'🎓':(a.domande.length||'·')}</div>
+    <h3>${esc(a.nome)} ${badge}</h3>
+    <div class="meta">${a.domande.length} domande</div>
+    <div class="go" style="color:${m.color}">${empty?'Vuoto':(isExam?'Inizia esame →':'Fai il quiz →')}</div>
+  </div>`;
+}
+
 function renderMateria(){
   const m = findMateria(curMateria);
   if(!m){ return go('home'); }
-  let cards='';
+  let bodyHtml='';
   if(m.argomenti.length===0){
-    cards = `<div class="empty"><div class="big">📭</div><h3>Nessun argomento</h3>
-      <p>Questa materia non ha ancora argomenti. Aggiungili dall'area Admin.</p>
-      <button class="btn teal" onclick="openAdmin()">🔧 Apri Admin</button></div>`;
+    bodyHtml = `<div class="empty"><div class="big">📭</div><h3>Nessun argomento</h3>
+      <p>Questa materia non ha ancora argomenti. Aggiungili da "I miei quiz".</p>
+      <button class="btn teal" onclick="openAdmin()">✏️ Vai a I miei quiz</button></div>`;
   } else {
-    m.argomenti.forEach((a,i)=>{
-      const empty = a.domande.length===0;
-      cards += `<div class="card" style="animation-delay:${i*55}ms;${empty?'opacity:.6':''}"
-          onclick="${empty?`toast('Questo argomento non ha ancora domande')`:`startQuiz('${a.id}')`}">
-        <div class="corner" style="background:${m.color}"></div>
-        <div class="ic" style="background:${tint(m.color)};color:${m.color}">${a.domande.length||'·'}</div>
-        <h3>${esc(a.nome)}</h3>
-        <div class="meta">${a.domande.length} domande</div>
-        <div class="go" style="color:${m.color}">${empty?'Vuoto':'Fai il quiz →'}</div>
-      </div>`;
-    });
+    const quizzes = m.argomenti.filter(a=>!(a.esame && a.esame.on));
+    const esami   = m.argomenti.filter(a=> (a.esame && a.esame.on));
+    if(quizzes.length){
+      const cards = quizzes.map((a,i)=>argCard(m,a,i)).join('');
+      bodyHtml += (esami.length ? `<h2 class="secthead">📝 Allenamento</h2>` : '') + `<div class="grid">${cards}</div>`;
+    }
+    if(esami.length){
+      const cards = esami.map((a,i)=>argCard(m,a,i)).join('');
+      bodyHtml += `<h2 class="secthead" style="margin-top:26px">🎓 Esami</h2><div class="grid">${cards}</div>`;
+    }
   }
   app.innerHTML = crumbs([['Materie',"go('home')"]], m.nome)
     + `<div class="hero"><div>
@@ -510,23 +530,37 @@ function renderMateria(){
         <h1 style="margin-top:14px">Scegli un argomento</h1>
         <p>${countQ(m)} domande in totale, suddivise in ${m.argomenti.length} argomenti.</p>
       </div></div>
-      <div class="grid">${cards}</div>`;
+      ${bodyHtml}`;
 }
 
 /* ====================== QUIZ ====================== */
+function examCfg(e){
+  if(!e || !e.on) return null;
+  return {
+    giusta: Number(e.giusta)||0,
+    sbagliata: Number(e.sbagliata)||0,
+    vuota: Number(e.vuota)||0,
+    soglia: (e.soglia==null?60:Number(e.soglia)),
+    reveal: !!e.reveal
+  };
+}
+
 function startQuiz(argId){
   const m = findMateria(curMateria); const a = findArg(m, argId);
   if(!a || a.domande.length===0) return;
   curArg = argId;
+  const cfg = examCfg(a.esame);
   quiz = { qs:a.domande, idx:0, answers:new Array(a.domande.length).fill(null), locked:false,
-           color:m.color, title:a.nome, subtitle:m.nome, emoji:m.emoji, materiaId:m.id, argId, public:false };
+           color:m.color, title:a.nome, subtitle:m.nome, emoji:m.emoji, materiaId:m.id, argId, public:false,
+           esame:cfg, reveal: cfg? cfg.reveal : true };
   go('quiz');
 }
 function startPublicQuiz(pq, opts){
   opts = opts || {};
+  const cfg = examCfg(pq.esame);
   quiz = { qs:pq.domande, idx:0, answers:new Array(pq.domande.length).fill(null), locked:false,
            color:pq.color||'#FF6B5E', title:pq.title, subtitle:pq.subtitle, emoji:pq.emoji||'📘',
-           public:true, backToMateria:!!opts.backToMateria };
+           public:true, backToMateria:!!opts.backToMateria, esame:cfg, reveal: cfg? cfg.reveal : true };
   publicMode = true;
   renderQuiz();
 }
@@ -535,6 +569,7 @@ function restartQuiz(){ quiz.idx=0; quiz.answers=new Array(quiz.qs.length).fill(
 function renderQuiz(){
   if(!quiz){ return go('home'); }
   if(quiz.idx >= quiz.qs.length){ return renderResult(); }
+  const examFlow = quiz.esame && !quiz.reveal;   // esame senza feedback immediato
   const q = quiz.qs[quiz.idx];
   const picked = quiz.answers[quiz.idx];
   const pct = Math.round((quiz.idx)/quiz.qs.length*100);
@@ -547,78 +582,132 @@ function renderQuiz(){
       if(i===q.corretta) cls+=' correct';
       else if(i===picked) cls+=' wrong';
     } else if(i===picked) cls+=' sel';
-    opts += `<button class="${cls}" ${quiz.locked?'disabled':''} onclick="pick(${i})">
+    opts += `<button class="${cls}" ${quiz.locked?'disabled':''} title="${examFlow&&i===picked?'Tocca di nuovo per deselezionare':''}" onclick="pick(${i})">
       <span class="key">${keys[i]}</span><span>${esc(o)}</span></button>`;
   });
 
   const expl = (quiz.locked && q.spiegazione)
     ? `<div class="explain"><b>${picked===q.corretta?'Esatto! ✅':'Non proprio 🔍'}</b> — ${esc(q.spiegazione)}</div>` : '';
 
-  const footRight = quiz.locked
-    ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">${quiz.idx+1<quiz.qs.length?'Avanti →':'Vedi risultato 🎉'}</button>`
-    : `<button class="btn" id="confirmBtn" style="background:${quiz.color};box-shadow:none" ${picked===null?'disabled':''} onclick="confirmAns()">Conferma</button>`;
+  let foot;
+  if(examFlow){
+    const isLast = quiz.idx+1 >= quiz.qs.length;
+    foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
+      <div style="display:flex;gap:10px">
+        ${quiz.idx>0?`<button class="btn ghost sm" onclick="prevQ()">← Indietro</button>`:''}
+        ${isLast
+          ? `<button class="btn teal" style="box-shadow:none" onclick="submitExam()">✅ Consegna</button>`
+          : `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">Avanti →</button>`}
+      </div>`;
+  } else {
+    const footRight = quiz.locked
+      ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">${quiz.idx+1<quiz.qs.length?'Avanti →':(quiz.esame?'Vedi voto 🎓':'Vedi risultato 🎉')}</button>`
+      : `<button class="btn" id="confirmBtn" style="background:${quiz.color};box-shadow:none" ${picked===null?'disabled':''} onclick="confirmAns()">Conferma</button>`;
+    foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>${footRight}`;
+  }
 
   const top = quiz.public
     ? `<div class="crumbs"><span>${quiz.emoji} ${esc(quiz.subtitle)} › ${esc(quiz.title)}</span></div>`
     : crumbs([['Materie',"go('home')"],[quiz.subtitle,`openMateria('${quiz.materiaId}')`]], quiz.title);
+
+  const badge = quiz.esame ? `<span class="exambadge">🎓 Esame</span>` : '';
 
   app.innerHTML = top
     + `<div class="quizbox">
         <div class="progress"><i style="width:${pct}%"></i></div>
         <div class="qcount">Domanda ${quiz.idx+1} di ${quiz.qs.length}</div>
         <div class="qcard">
-          <div class="qnum">${esc(quiz.title)}</div>
+          <div class="qnum">${esc(quiz.title)} ${badge}</div>
           <h2>${esc(q.domanda)}</h2>
           <div class="opts">${opts}</div>
           ${expl}
-          <div class="qfoot">
-            <button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
-            ${footRight}
-          </div>
+          <div class="qfoot">${foot}</div>
         </div>
       </div>`;
 }
 
-function pick(i){ if(quiz.locked) return; quiz.answers[quiz.idx]=i; renderQuiz(); }
+function pick(i){
+  if(quiz.esame && !quiz.reveal){ // esame: seleziona/deseleziona liberamente
+    quiz.answers[quiz.idx] = (quiz.answers[quiz.idx]===i) ? null : i;
+    renderQuiz(); return;
+  }
+  if(quiz.locked) return; quiz.answers[quiz.idx]=i; renderQuiz();
+}
 function confirmAns(){ if(quiz.answers[quiz.idx]===null) return; quiz.locked=true; renderQuiz(); }
 function next(){ quiz.idx++; quiz.locked=false; renderQuiz(); }
+function prevQ(){ if(quiz.idx>0){ quiz.idx--; quiz.locked=false; renderQuiz(); } }
+function submitExam(){
+  const blanks = quiz.answers.filter(a=>a==null).length;
+  const finish = ()=>{ quiz.idx = quiz.qs.length; renderResult(); };
+  if(blanks>0){
+    confirmModal('Consegnare l’esame?', blanks+' domande senza risposta verranno contate come non date.', 'Consegna', ()=>{ closeModal(); finish(); });
+  } else { finish(); }
+}
 function quitQuiz(){
   if(quiz && quiz.public){ if(quiz.backToMateria) renderPublicMateria(); else leavePublic(); return; }
-  confirmModal('Uscire dal quiz?','I progressi di questo quiz andranno persi.','Esci',()=>{ closeModal(); openMateria(curMateria); });
+  confirmModal('Uscire dal quiz?','I progressi andranno persi.','Esci',()=>{ closeModal(); openMateria(curMateria); });
 }
 
 function renderResult(){
-  let correct=0;
-  quiz.qs.forEach((q,i)=>{ if(quiz.answers[i]===q.corretta) correct++; });
-  const tot=quiz.qs.length, pct=Math.round(correct/tot*100);
-  const ringColor = pct>=80? '#3DD6A0' : pct>=50? '#FF9F45' : '#FF6B5E';
-  const msg = pct>=80? 'Fantastico! Conosci bene l’argomento. 🌟' : pct>=50? 'Bel lavoro, ma puoi migliorare! 💪' : 'Niente paura, riprova e andrà meglio! 🔁';
+  const cfg = quiz.esame;
+  let correct=0, wrong=0, blank=0;
+  quiz.qs.forEach((q,i)=>{
+    const ans=quiz.answers[i];
+    if(ans==null) blank++; else if(ans===q.corretta) correct++; else wrong++;
+  });
+  const tot=quiz.qs.length;
+
+  let pct, ringColor, ringSmall, headline, line, passLine='', celebrate=false;
+  if(cfg){
+    const raw = correct*cfg.giusta + wrong*cfg.sbagliata + blank*cfg.vuota;
+    pct = Math.max(0, Math.min(100, Math.round(raw)));
+    const passed = pct >= cfg.soglia;
+    celebrate = passed;
+    ringColor = passed ? '#3DD6A0' : '#FF6B5E';
+    ringSmall = 'voto';
+    headline = passed ? 'Esame superato! 🎓' : 'Esame non superato';
+    passLine = `<p style="font-weight:800;margin:-4px 0 14px;color:${passed?'#0B7A52':'var(--primary-ink)'}">${passed?'✅ Superato':'❌ Non superato'} · soglia ${cfg.soglia}%</p>`;
+    line = `${correct} giuste · ${wrong} sbagliate · ${blank} senza risposta`;
+  } else {
+    pct = Math.round(correct/tot*100);
+    ringColor = pct>=80?'#3DD6A0':pct>=50?'#FF9F45':'#FF6B5E';
+    ringSmall = correct+'/'+tot+' corrette';
+    headline = pct>=80?'Ottimo!':pct>=50?'Ben fatto!':'Quasi!';
+    line = pct>=80?'Fantastico! Conosci bene l’argomento. 🌟':pct>=50?'Bel lavoro, ma puoi migliorare! 💪':'Niente paura, riprova e andrà meglio! 🔁';
+    celebrate = pct>=80;
+  }
 
   let rev='';
   quiz.qs.forEach((q,i)=>{
-    const ok = quiz.answers[i]===q.corretta;
-    const yourAns = quiz.answers[i]!=null ? q.opzioni[quiz.answers[i]] : '—';
-    rev += `<div class="rev"><div class="dot ${ok?'ok':'no'}">${ok?'✓':'✕'}</div>
-      <div><div class="t">${esc(q.domanda)}</div>
-      <div class="a">${ok? 'Risposta corretta: '+esc(q.opzioni[q.corretta]) : 'Tu: '+esc(yourAns)+' · Corretta: '+esc(q.opzioni[q.corretta])}</div></div></div>`;
+    const ans=quiz.answers[i];
+    const isBlank = ans==null;
+    const ok = ans===q.corretta;
+    const yourAns = !isBlank ? q.opzioni[ans] : '—';
+    let contrib='';
+    if(cfg){ const c = isBlank?cfg.vuota:(ok?cfg.giusta:cfg.sbagliata); contrib = ` <span class="contrib ${c>0?'pos':c<0?'neg':''}">${c>0?'+':''}${c}%</span>`; }
+    rev += `<div class="rev"><div class="dot ${ok?'ok':'no'}">${ok?'✓':(isBlank?'–':'✕')}</div>
+      <div><div class="t">${esc(q.domanda)}${contrib}</div>
+      <div class="a">${ok? 'Risposta corretta: '+esc(q.opzioni[q.corretta]) : (isBlank?'Senza risposta':'Tu: '+esc(yourAns))+' · Corretta: '+esc(q.opzioni[q.corretta])}</div></div></div>`;
   });
 
+  const retryLabel = cfg ? '🔁 Rifai l’esame' : '🔁 Riprova';
   const actions = quiz.public
-    ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">🔁 Riprova</button>
+    ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">${retryLabel}</button>
        ${quiz.backToMateria
-          ? `<button class="btn ghost" onclick="renderPublicMateria()">← Altri argomenti</button>`
+          ? `<button class="btn ghost" onclick="renderPublicMateria()">← Altri</button>`
           : `<button class="btn teal" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`}`
-    : `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">🔁 Riprova</button>
+    : `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">${retryLabel}</button>
        <button class="btn ghost" onclick="openMateria('${quiz.materiaId}')">← Altri argomenti</button>`;
 
   app.innerHTML = `<div class="result">
-      <div class="scoreRing" style="background:${ringColor}"><div><b>${pct}%</b><br><small>${correct}/${tot} corrette</small></div></div>
-      <h2>${pct>=80?'Ottimo!':pct>=50?'Ben fatto!':'Quasi!'}</h2>
-      <p>${msg}</p>
+      <div class="scoreRing" style="background:${ringColor}"><div><b>${pct}%</b><br><small>${ringSmall}</small></div></div>
+      <h2>${headline}</h2>
+      ${passLine}
+      <p>${line}</p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${actions}</div>
       <div class="review"><h4>Riepilogo risposte</h4>${rev}</div>
     </div>`;
-  if(pct>=80) confetti();
+  if(celebrate) confetti();
 }
 
 /* ====================== MODALITÀ PUBBLICA (link condiviso) ====================== */
@@ -643,12 +732,13 @@ function renderPublicMateria(){
   const pm = publicMateria; if(!pm){ return leavePublic(); }
   let cards='';
   pm.argomenti.forEach((a,i)=>{
+    const isExam = !!(a.esame && a.esame.on);
     cards += `<div class="card" style="animation-delay:${i*55}ms" onclick="startPublicArg(${i})">
       <div class="corner" style="background:${pm.color}"></div>
-      <div class="ic" style="background:${tint(pm.color)};color:${pm.color}">${a.domande.length}</div>
-      <h3>${esc(a.nome)}</h3>
+      <div class="ic" style="background:${tint(pm.color)};color:${pm.color}">${isExam?'🎓':a.domande.length}</div>
+      <h3>${esc(a.nome)} ${isExam?'<span class="exambadge">🎓 Esame</span>':''}</h3>
       <div class="meta">${a.domande.length} domande</div>
-      <div class="go" style="color:${pm.color}">Fai il quiz →</div>
+      <div class="go" style="color:${pm.color}">${isExam?'Inizia esame →':'Fai il quiz →'}</div>
     </div>`;
   });
   app.innerHTML = `<div class="hero"><div>
@@ -660,7 +750,7 @@ function renderPublicMateria(){
 }
 function startPublicArg(i){
   const pm = publicMateria; const a = pm.argomenti[i];
-  startPublicQuiz({ title:a.nome, subtitle:pm.title, emoji:pm.emoji, color:pm.color, domande:a.domande }, { backToMateria:true });
+  startPublicQuiz({ title:a.nome, subtitle:pm.title, emoji:pm.emoji, color:pm.color, domande:a.domande, esame:a.esame }, { backToMateria:true });
 }
 function leavePublic(){ window.location.href = location.pathname; } // toglie ?q= e torna all'app
 function renderPublicError(msg){
@@ -677,12 +767,14 @@ function renderAdmin(){
     let args='';
     m.argomenti.forEach(a=>{
       const shared = !!myShares[a.id];
+      const isExam = !!(a.esame && a.esame.on);
       const shareBtn = a.domande.length>0
         ? `<button class="iconbtn ${shared?'shared':''}" title="${shared?'Condiviso — gestisci link':'Condividi con un link'}" onclick="shareArg('${m.id}','${a.id}')">🔗</button>`
         : '';
       args += `<div class="arg">
-        <span class="nm">${esc(a.nome)}${shared?' <span class="sharebadge" title="Quiz condiviso pubblicamente">link attivo</span>':''}</span>
+        <span class="nm">${esc(a.nome)}${isExam?' <span class="exambadge">🎓 Esame</span>':''}${shared?' <span class="sharebadge" title="Quiz condiviso pubblicamente">link attivo</span>':''}</span>
         <span class="cnt">${a.domande.length} dom.</span>
+        <button class="iconbtn ${isExam?'exam':''}" title="Modalità esame e pesi" onclick="editEsame('${m.id}','${a.id}')">🎓</button>
         ${shareBtn}
         <button class="iconbtn" title="Modifica domande (JSON)" onclick="editQuestions('${m.id}','${a.id}')">📝</button>
         <button class="iconbtn" title="Rinomina" onclick="renameArg('${m.id}','${a.id}')">✏️</button>
@@ -860,6 +952,62 @@ async function revokeShare(scope, mid, aid){
   shareModalView({state:'off', scope, mid, aid});
 }
 
+/* --- configurazione modalità esame (pesi) --- */
+function editEsame(mid, aid){
+  const a = findArg(findMateria(mid), aid);
+  const n = a.domande.length;
+  const def = { on:false, giusta: n>0 ? Math.round(10000/n)/100 : 10, sbagliata:0, vuota:0, soglia:60, reveal:false };
+  const e = Object.assign({}, def, a.esame || {});
+  showModal(`<div class="modal-head"><h3>🎓 Modalità esame</h3></div>
+    <div class="modal-body">
+      <p class="hint">Trasforma "${esc(a.nome)}" in un esame con punteggio a pesi. I valori sono in
+        <b>percentuale</b>: il voto finale è la somma dei punti, da 0% a 100%.</p>
+      <label class="lab" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="exOn" ${e.on?'checked':''} style="width:18px;height:18px"> Attiva la modalità esame
+      </label>
+      <div class="row" style="margin-top:14px">
+        <div><label class="lab">Risposta giusta (%)</label>
+          <input class="fld" id="exG" type="number" step="0.5" value="${e.giusta}"></div>
+        <div><label class="lab">Risposta sbagliata (%)</label>
+          <input class="fld" id="exS" type="number" step="0.5" value="${e.sbagliata}"></div>
+      </div>
+      <p class="hint" style="margin:6px 0 0">Per penalizzare gli errori usa un numero negativo (es. <code>-2</code>). Lascia <code>0</code> per non penalizzare.</p>
+      <div class="row" style="margin-top:14px">
+        <div><label class="lab">Senza risposta (%)</label>
+          <input class="fld" id="exV" type="number" step="0.5" value="${e.vuota}"></div>
+        <div><label class="lab">Soglia per superare (%)</label>
+          <input class="fld" id="exSo" type="number" step="1" value="${e.soglia}"></div>
+      </div>
+      <label class="lab" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px">
+        <input type="checkbox" id="exRev" ${e.reveal?'checked':''} style="width:18px;height:18px"> Mostra subito se la risposta è giusta
+      </label>
+      <p class="hint" style="margin:6px 0 0">Se disattivato (consigliato per un esame), si risponde a tutto e si vede il voto solo alla consegna.</p>
+      <div id="exHint" class="ok-note show" style="margin-top:14px"></div>
+      <div class="err" id="exErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn teal" onclick="saveEsame('${mid}','${aid}')">Salva</button>
+    </div>`);
+  const upd = ()=>{ const g=Number($('#exG').value)||0; const tot=Math.round(g*n*100)/100;
+    $('#exHint').textContent = `Con tutte le ${n} risposte giuste otterrai ${Math.min(100,Math.max(0,tot))}%` + (tot>100?' (limitato a 100%)':''); };
+  ['exG'].forEach(id=>$('#'+id).addEventListener('input',upd)); upd();
+}
+async function saveEsame(mid, aid){
+  const a = findArg(findMateria(mid), aid);
+  const on = $('#exOn').checked;
+  const giusta = Number($('#exG').value);
+  const sbagliata = Number($('#exS').value);
+  const vuota = Number($('#exV').value);
+  const soglia = Number($('#exSo').value);
+  const reveal = $('#exRev').checked;
+  if([giusta,sbagliata,vuota,soglia].some(v=>Number.isNaN(v))){ showErr('#exErr','Inserisci valori numerici validi.'); return; }
+  if(soglia<0 || soglia>100){ showErr('#exErr','La soglia deve essere tra 0 e 100.'); return; }
+  a.esame = { on, giusta, sbagliata, vuota, soglia, reveal };
+  await saveData(); closeModal(); renderAdmin();
+  toast(on ? 'Esame configurato 🎓' : 'Modalità esame disattivata');
+}
+
 /* --- editor domande JSON --- */
 const TEMPLATE = `[
   {
@@ -966,7 +1114,7 @@ async function doImport(){
     }
     data.materie.push({ id:uid(), nome:m.nome.trim(), emoji:m.emoji||'📘',
       color:PALETTE.includes(m.color)?m.color:(m.color||PALETTE[0]),
-      argomenti:args.map(a=>({id:uid(),nome:a.nome.trim(),domande:a._clean})) });
+      argomenti:args.map(a=>({id:uid(),nome:a.nome.trim(),domande:a._clean, ...(a.esame?{esame:a.esame}:{})})) });
   }
   await saveData(); closeModal(); renderAdmin(); toast('Importazione completata ✅');
 }
