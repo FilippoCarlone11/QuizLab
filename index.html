@@ -961,73 +961,137 @@ async function revokeShare(scope, mid, aid){
   shareModalView({state:'off', scope, mid, aid});
 }
 
-/* --- configurazione modalità esame (pesi) --- */
+/* --- configurazione modalità esame (a punti) --- */
 function editEsame(mid, aid){
   const a = findArg(findMateria(mid), aid);
-  const n = a.domande.length;
-  const def = { on:false, giusta: n>0 ? Math.round(10000/n)/100 : 10, sbagliata:0, vuota:0, soglia:60, reveal:false };
+
+  const def = {
+    on:false,
+    maxScore:13,
+    questionValue:0.8,
+    wrongPenalty:0,
+    reveal:false
+  };
+
   const e = Object.assign({}, def, a.esame || {});
+
   showModal(`<div class="modal-head"><h3>🎓 Modalità esame</h3></div>
     <div class="modal-body">
-      <p class="hint">Trasforma "${esc(a.nome)}" in un esame con punteggio a pesi. I valori sono in
-        <b>percentuale</b>: il voto finale è la somma dei punti, da 0% a 100%.</p>
+
+      <p class="hint">
+        Configura "${esc(a.nome)}" come esame a punti.
+        Il punteggio finale è dato dalla somma dei punti ottenuti
+        nelle risposte corrette e delle eventuali penalità.
+      </p>
+
       <label class="lab" style="display:flex;align-items:center;gap:10px;cursor:pointer">
-        <input type="checkbox" id="exOn" ${e.on?'checked':''} style="width:18px;height:18px"> Attiva la modalità esame
+        <input type="checkbox" id="exOn" ${e.on?'checked':''}
+               style="width:18px;height:18px">
+        Attiva la modalità esame
       </label>
+
       <div class="row" style="margin-top:14px">
-        <div><label class="lab">Risposta giusta (%)</label>
-          <input class="fld" id="exG" type="number" step="0.5" value="${e.giusta}"></div>
-        <div><label class="lab">Risposta sbagliata (%)</label>
-          <input class="fld" id="exS" type="number" step="0.5" value="${e.sbagliata}"></div>
+        <div>
+          <label class="lab">Punteggio massimo</label>
+          <input class="fld" id="exMax"
+                 type="number" step="0.1"
+                 value="${e.maxScore}">
+        </div>
+
+        <div>
+          <label class="lab">Punti per risposta corretta</label>
+          <input class="fld" id="exQ"
+                 type="number" step="0.1"
+                 value="${e.questionValue}">
+        </div>
       </div>
-      <p class="hint" style="margin:6px 0 0">Per penalizzare gli errori usa un numero negativo (es. <code>-2</code>). Lascia <code>0</code> per non penalizzare.</p>
-      <div class="row" style="margin-top:14px">
-        <div><label class="lab">Senza risposta (%)</label>
-          <input class="fld" id="exV" type="number" step="0.5" value="${e.vuota}"></div>
-        <div><label class="lab">Soglia per superare (%)</label>
-          <input class="fld" id="exSo" type="number" step="1" value="${e.soglia}"></div>
+
+      <div style="margin-top:14px">
+        <label class="lab">Penalità risposta sbagliata</label>
+        <input class="fld" id="exP"
+               type="number" step="0.1"
+               value="${e.wrongPenalty}">
       </div>
-      <label class="lab" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px">
-        <input type="checkbox" id="exRev" ${e.reveal?'checked':''} style="width:18px;height:18px"> Mostra subito se la risposta è giusta
+
+      <p class="hint" style="margin-top:6px">
+        Inserisci 0 per nessuna penalità oppure un valore negativo
+        (es. -0.2).
+      </p>
+
+      <label class="lab"
+             style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px">
+        <input type="checkbox" id="exRev"
+               ${e.reveal?'checked':''}
+               style="width:18px;height:18px">
+        Mostra subito se la risposta è giusta
       </label>
-      <p class="hint" style="margin:6px 0 0">Se disattivato (consigliato per un esame), si risponde a tutto e si vede il voto solo alla consegna.</p>
-      <div id="exHint" class="ok-note show" style="margin-top:14px"></div>
+
+      <div id="exHint"
+           class="ok-note show"
+           style="margin-top:14px"></div>
+
       <div class="err" id="exErr"></div>
+
     </div>
+
     <div class="modal-foot">
       <button class="btn ghost" onclick="closeModal()">Annulla</button>
       <button class="btn teal" onclick="saveEsame('${mid}','${aid}')">Salva</button>
     </div>`);
-  const upd = ()=>{ const g=Number($('#exG').value)||0; const tot=Math.round(g*n*100)/100;
-    $('#exHint').textContent = `Con tutte le ${n} risposte giuste otterrai ${Math.min(100,Math.max(0,tot))}%` + (tot>100?' (limitato a 100%)':''); };
-  ['exG'].forEach(id=>$('#'+id).addEventListener('input',upd)); upd();
+
+  const upd = ()=>{
+    const max = Number($('#exMax').value)||0;
+    const q   = Number($('#exQ').value)||0;
+
+    $('#exHint').textContent =
+      `Con tutte le risposte corrette otterrai ${max} punti. ` +
+      `Ogni risposta corretta vale ${q} punti.`;
+  };
+
+  ['exMax','exQ'].forEach(id =>
+    $('#'+id).addEventListener('input', upd)
+  );
+
+  upd();
 }
 async function saveEsame(mid, aid){
   const a = findArg(findMateria(mid), aid);
+
   const on = $('#exOn').checked;
-  const giusta = Number($('#exG').value);
-  const sbagliata = Number($('#exS').value);
-  const vuota = Number($('#exV').value);
-  const soglia = Number($('#exSo').value);
   const reveal = $('#exRev').checked;
+
   const maxScore = Number($('#exMax').value);
   const questionValue = Number($('#exQ').value);
   const wrongPenalty = Number($('#exP').value);
-  if([giusta,sbagliata,vuota,soglia].some(v=>Number.isNaN(v))){ showErr('#exErr','Inserisci valori numerici validi.'); return; }
-  if(soglia<0 || soglia>100){ showErr('#exErr','La soglia deve essere tra 0 e 100.'); return; }
+
+  if ([maxScore, questionValue, wrongPenalty].some(v => Number.isNaN(v))) {
+    showErr('#exErr', 'Inserisci valori numerici validi.');
+    return;
+  }
+
+  if (maxScore <= 0) {
+    showErr('#exErr', 'Il punteggio massimo deve essere maggiore di 0.');
+    return;
+  }
+
+  if (questionValue <= 0) {
+    showErr('#exErr', 'Il valore della risposta corretta deve essere maggiore di 0.');
+    return;
+  }
+
   a.esame = {
-  on,
-  maxScore,
-  questionValue,
-  wrongPenalty,
-  reveal
+    on,
+    maxScore,
+    questionValue,
+    wrongPenalty,
+    reveal
   };
-  await saveData(); closeModal(); renderAdmin();
+
+  await saveData();
+  closeModal();
+  renderAdmin();
+
   toast(on ? 'Esame configurato 🎓' : 'Modalità esame disattivata');
-
-
-
-
 }
 
 /* --- editor domande JSON --- */
