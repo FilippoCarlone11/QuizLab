@@ -312,8 +312,11 @@ async function loadData(){
   if(!r.ok || !r.data){ throw new Error((r.data && r.data.error) || 'Errore di caricamento'); }
   data = { materie: Array.isArray(r.data.materie) ? r.data.materie : [] };
   settings = (r.data.settings && typeof r.data.settings === 'object') ? r.data.settings : {};
-  myShares = {};
-  (r.data.shares || []).forEach(s => { myShares[s.argomento_id] = s.token; });
+  myShares = {}; myMateriaShares = {};
+  (r.data.shares || []).forEach(s => {
+    if (s.argomento_id) myShares[s.argomento_id] = s.token;
+    else myMateriaShares[s.materia_id] = s.token;
+  });
   return true;
 }
 async function persist(){ await api('/api/data', 'PUT', { materie:data.materie, settings }); }
@@ -426,6 +429,8 @@ let curArg = null;        // id
 let quiz = null;          // {qs, idx, answers[], locked}
 let publicMode = false;   // true quando si apre un quiz da link pubblico
 let myShares = {};        // argomento_id -> token del link pubblico
+let myMateriaShares = {}; // materia_id   -> token del link pubblico (intera materia)
+let publicMateria = null; // payload della materia condivisa, quando aperta da link
 
 const app = document.getElementById('app');
 const $ = s => document.querySelector(s);
@@ -517,9 +522,11 @@ function startQuiz(argId){
            color:m.color, title:a.nome, subtitle:m.nome, emoji:m.emoji, materiaId:m.id, argId, public:false };
   go('quiz');
 }
-function startPublicQuiz(pq){
+function startPublicQuiz(pq, opts){
+  opts = opts || {};
   quiz = { qs:pq.domande, idx:0, answers:new Array(pq.domande.length).fill(null), locked:false,
-           color:pq.color||'#FF6B5E', title:pq.title, subtitle:pq.subtitle, emoji:pq.emoji||'📘', public:true };
+           color:pq.color||'#FF6B5E', title:pq.title, subtitle:pq.subtitle, emoji:pq.emoji||'📘',
+           public:true, backToMateria:!!opts.backToMateria };
   publicMode = true;
   renderQuiz();
 }
@@ -576,7 +583,7 @@ function pick(i){ if(quiz.locked) return; quiz.answers[quiz.idx]=i; renderQuiz()
 function confirmAns(){ if(quiz.answers[quiz.idx]===null) return; quiz.locked=true; renderQuiz(); }
 function next(){ quiz.idx++; quiz.locked=false; renderQuiz(); }
 function quitQuiz(){
-  if(quiz && quiz.public){ leavePublic(); return; }
+  if(quiz && quiz.public){ if(quiz.backToMateria) renderPublicMateria(); else leavePublic(); return; }
   confirmModal('Uscire dal quiz?','I progressi di questo quiz andranno persi.','Esci',()=>{ closeModal(); openMateria(curMateria); });
 }
 
@@ -598,7 +605,9 @@ function renderResult(){
 
   const actions = quiz.public
     ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">🔁 Riprova</button>
-       <button class="btn teal" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`
+       ${quiz.backToMateria
+          ? `<button class="btn ghost" onclick="renderPublicMateria()">← Altri argomenti</button>`
+          : `<button class="btn teal" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`}`
     : `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="restartQuiz()">🔁 Riprova</button>
        <button class="btn ghost" onclick="openMateria('${quiz.materiaId}')">← Altri argomenti</button>`;
 
@@ -619,15 +628,39 @@ async function bootPublic(token){
   if(nav) nav.innerHTML = `<button class="nav-btn" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`;
   const foot = document.getElementById('foot');
   if(foot) foot.textContent = 'Quiz condiviso con QuizLab 🧡 — crea i tuoi gratis.';
-  app.innerHTML = `<div style="text-align:center;padding:60px 20px"><span class="pill">Carico il quiz… ⏳</span></div>`;
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px"><span class="pill">Carico… ⏳</span></div>`;
   try{
     const r = await fetch('/api/public?token=' + encodeURIComponent(token), {cache:'no-store'});
     let j = null; try{ j = await r.json(); }catch(e){}
     if(!r.ok || !j){ return renderPublicError((j && j.error) || 'Quiz non disponibile.'); }
-    startPublicQuiz(j);
+    if(j.type === 'materia'){ publicMateria = j; return renderPublicMateria(); }
+    startPublicQuiz(j, { backToMateria:false });
   }catch(e){
     renderPublicError('Server non raggiungibile. Una volta su Vercel funzionerà.');
   }
+}
+function renderPublicMateria(){
+  const pm = publicMateria; if(!pm){ return leavePublic(); }
+  let cards='';
+  pm.argomenti.forEach((a,i)=>{
+    cards += `<div class="card" style="animation-delay:${i*55}ms" onclick="startPublicArg(${i})">
+      <div class="corner" style="background:${pm.color}"></div>
+      <div class="ic" style="background:${tint(pm.color)};color:${pm.color}">${a.domande.length}</div>
+      <h3>${esc(a.nome)}</h3>
+      <div class="meta">${a.domande.length} domande</div>
+      <div class="go" style="color:${pm.color}">Fai il quiz →</div>
+    </div>`;
+  });
+  app.innerHTML = `<div class="hero"><div>
+      <span class="pill" style="color:${pm.color}">${pm.emoji} ${esc(pm.title)}</span>
+      <h1 style="margin-top:14px">Scegli un argomento</h1>
+      <p>${pm.argomenti.length} quiz disponibili in questa materia condivisa.</p>
+    </div></div>
+    <div class="grid">${cards}</div>`;
+}
+function startPublicArg(i){
+  const pm = publicMateria; const a = pm.argomenti[i];
+  startPublicQuiz({ title:a.nome, subtitle:pm.title, emoji:pm.emoji, color:pm.color, domande:a.domande }, { backToMateria:true });
 }
 function leavePublic(){ window.location.href = location.pathname; } // toglie ?q= e torna all'app
 function renderPublicError(msg){
@@ -656,10 +689,12 @@ function renderAdmin(){
         <button class="iconbtn danger" title="Elimina argomento" onclick="delArg('${m.id}','${a.id}')">🗑️</button>
       </div>`;
     });
+    const matShared = !!myMateriaShares[m.id];
     panels += `<div class="panel" style="animation-delay:${i*40}ms">
       <div class="panel-head">
         <div class="ic" style="background:${tint(m.color)};color:${m.color}">${m.emoji}</div>
-        <div class="tt"><h3>${esc(m.nome)}</h3><div class="m">${m.argomenti.length} argomenti · ${countQ(m)} domande</div></div>
+        <div class="tt"><h3>${esc(m.nome)}${matShared?' <span class="sharebadge" title="Materia condivisa pubblicamente">materia condivisa</span>':''}</h3><div class="m">${m.argomenti.length} argomenti · ${countQ(m)} domande</div></div>
+        ${countQ(m)>0?`<button class="iconbtn ${matShared?'shared':''}" title="${matShared?'Materia condivisa — gestisci link':'Condividi tutta la materia con un link'}" onclick="shareMateria('${m.id}')">🔗</button>`:''}
         <button class="iconbtn" title="Modifica materia" onclick="editMateria('${m.id}')">✏️</button>
         <button class="iconbtn danger" title="Elimina materia" onclick="delMateria('${m.id}')">🗑️</button>
       </div>
@@ -746,13 +781,25 @@ function shareUrl(token){ return location.origin + location.pathname + '?q=' + t
 async function shareArg(mid,aid){
   const m=findMateria(mid); const a=findArg(m,aid);
   if(!a || a.domande.length===0){ toast('Aggiungi prima qualche domanda'); return; }
-  // mostra subito il modale in caricamento
   shareModalView({state:'loading', nome:a.nome});
-  if(myShares[aid]){ return shareModalView({state:'active', nome:a.nome, aid, token:myShares[aid]}); }
+  if(myShares[aid]){ return shareModalView({state:'active', nome:a.nome, scope:'arg', mid, aid, token:myShares[aid]}); }
   const r = await api('/api/share','POST',{ materia_id:mid, argomento_id:aid, title:a.nome, emoji:m.emoji, color:m.color });
-  if(!r.ok || !r.data || !r.data.token){ shareModalView({state:'error', nome:a.nome, msg:(r.data&&r.data.error)||'Operazione non riuscita.'}); return; }
+  if(!r.ok || !r.data || !r.data.token){ shareModalView({state:'error', msg:(r.data&&r.data.error)||'Operazione non riuscita.'}); return; }
   myShares[aid] = r.data.token;
-  shareModalView({state:'active', nome:a.nome, aid, token:r.data.token});
+  renderAdmin();
+  shareModalView({state:'active', nome:a.nome, scope:'arg', mid, aid, token:r.data.token});
+}
+
+async function shareMateria(mid){
+  const m=findMateria(mid);
+  if(!m || countQ(m)===0){ toast('Aggiungi prima qualche domanda'); return; }
+  shareModalView({state:'loading', nome:m.nome});
+  if(myMateriaShares[mid]){ return shareModalView({state:'active', nome:m.nome, scope:'mat', mid, token:myMateriaShares[mid], whole:true}); }
+  const r = await api('/api/share','POST',{ materia_id:mid, argomento_id:'', title:m.nome, emoji:m.emoji, color:m.color });
+  if(!r.ok || !r.data || !r.data.token){ shareModalView({state:'error', msg:(r.data&&r.data.error)||'Operazione non riuscita.'}); return; }
+  myMateriaShares[mid] = r.data.token;
+  renderAdmin();
+  shareModalView({state:'active', nome:m.nome, scope:'mat', mid, token:r.data.token, whole:true});
 }
 
 function shareModalView(s){
@@ -763,36 +810,35 @@ function shareModalView(s){
     body = `<div class="modal-body"><div class="err show">${esc(s.msg)}</div></div>
       <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`;
   } else if(s.state==='off'){
+    const reactivate = s.scope==='mat' ? `shareMateria('${s.mid}')` : `shareArg('${s.mid}','${s.aid}')`;
     body = `<div class="modal-body">
         <p class="hint">La condivisione è disattivata. Il vecchio link non funziona più.</p>
       </div>
       <div class="modal-foot">
         <button class="btn ghost" onclick="closeModal()">Chiudi</button>
-        <button class="btn teal" onclick="shareArg('${s.mid}','${s.aid}')">🔗 Riattiva link</button>
+        <button class="btn teal" onclick="${reactivate}">🔗 Riattiva link</button>
       </div>`;
   } else { // active
     const url = shareUrl(s.token);
+    const what = s.whole
+      ? `tutta la materia <b>"${esc(s.nome)}"</b> (chi apre sceglie l'argomento)`
+      : `il quiz <b>"${esc(s.nome)}"</b>`;
+    const revokeCall = s.scope==='mat' ? `revokeShare('mat','${s.mid}','')` : `revokeShare('arg','${s.mid}','${s.aid}')`;
     body = `<div class="modal-body">
-        <p class="hint">Chiunque abbia questo link può fare il quiz <b>"${esc(s.nome)}"</b>, senza registrarsi.
-        Le tue modifiche al quiz si aggiornano in automatico.</p>
+        <p class="hint">Chiunque abbia questo link può fare ${what}, senza registrarsi.
+        Le tue modifiche si aggiornano in automatico.</p>
         <div class="shareurl">
           <input class="fld" id="shareUrlInput" readonly value="${esc(url)}" onclick="this.select()">
           <button class="btn teal sm" onclick="copyShare()" style="flex:none">Copia</button>
         </div>
         <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn ghost sm" href="${esc(url)}" target="_blank" rel="noopener">↗ Apri il quiz</a>
-          <button class="btn ghost sm" style="color:var(--primary-ink);border-color:#FAD3CD"
-            onclick="revokeShare('${findArgMateria(s.aid)}','${s.aid}')">🚫 Disattiva link</button>
+          <a class="btn ghost sm" href="${esc(url)}" target="_blank" rel="noopener">↗ Apri</a>
+          <button class="btn ghost sm" style="color:var(--primary-ink);border-color:#FAD3CD" onclick="${revokeCall}">🚫 Disattiva link</button>
         </div>
       </div>
       <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Fatto</button></div>`;
   }
-  showModal(`<div class="modal-head"><h3>🔗 Condividi il quiz</h3></div>${body}`);
-}
-
-function findArgMateria(aid){
-  for(const m of data.materie){ if(m.argomenti.some(a=>a.id===aid)) return m.id; }
-  return '';
+  showModal(`<div class="modal-head"><h3>🔗 ${s.whole?'Condividi la materia':'Condividi il quiz'}</h3></div>${body}`);
 }
 
 function copyShare(){
@@ -804,13 +850,14 @@ function copyShare(){
   } else { inp.select(); document.execCommand('copy'); done(); }
 }
 
-async function revokeShare(mid,aid){
-  const token=myShares[aid]; if(!token) return;
+async function revokeShare(scope, mid, aid){
+  const token = scope==='mat' ? myMateriaShares[mid] : myShares[aid];
+  if(!token) return;
   const r = await api('/api/share?token='+encodeURIComponent(token),'DELETE');
   if(!r.ok){ toast('⚠️ Non riuscito'); return; }
-  delete myShares[aid];
+  if(scope==='mat') delete myMateriaShares[mid]; else delete myShares[aid];
   renderAdmin();
-  shareModalView({state:'off', mid, aid});
+  shareModalView({state:'off', scope, mid, aid});
 }
 
 /* --- editor domande JSON --- */

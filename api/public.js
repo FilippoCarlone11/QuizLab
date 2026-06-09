@@ -19,12 +19,30 @@ export default async function handler(req, res) {
     if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = { materie: [] }; } }
 
     const mat = (d.materie || []).find((m) => m.id === sh.materia_id);
-    const arg = mat && (mat.argomenti || []).find((a) => a.id === sh.argomento_id);
-    if (!mat || !arg || !Array.isArray(arg.domande) || arg.domande.length === 0) {
-      return res.status(404).json({ error: 'Questo quiz non è più disponibile.' });
+    if (!mat) return res.status(404).json({ error: 'Questo quiz non è più disponibile.' });
+
+    // Condivisione dell'intera materia (argomento_id vuoto)
+    if (!sh.argomento_id) {
+      const argomenti = (mat.argomenti || [])
+        .filter((a) => Array.isArray(a.domande) && a.domande.length > 0)
+        .map((a) => ({ id: a.id, nome: a.nome, domande: a.domande }));
+      if (!argomenti.length) return res.status(404).json({ error: 'Questa materia non è più disponibile.' });
+      return res.status(200).json({
+        type: 'materia',
+        title: mat.nome,
+        emoji: mat.emoji || '📘',
+        color: mat.color || '#FF6B5E',
+        argomenti
+      });
     }
 
+    // Condivisione di un singolo argomento
+    const arg = (mat.argomenti || []).find((a) => a.id === sh.argomento_id);
+    if (!arg || !Array.isArray(arg.domande) || arg.domande.length === 0) {
+      return res.status(404).json({ error: 'Questo quiz non è più disponibile.' });
+    }
     return res.status(200).json({
+      type: 'quiz',
       title: arg.nome,
       subtitle: mat.nome,
       emoji: mat.emoji || '📘',

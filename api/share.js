@@ -11,8 +11,11 @@ export default async function handler(req, res) {
     await ensureSchema();
 
     if (req.method === 'POST') {
-      const { materia_id, argomento_id, title, emoji, color } = await readBody(req);
-      if (!materia_id || !argomento_id) return res.status(400).json({ error: 'Dati mancanti.' });
+      const body = await readBody(req);
+      const materia_id = body.materia_id;
+      const argomento_id = body.argomento_id || ''; // '' = intera materia
+      const { title, emoji, color } = body;
+      if (!materia_id) return res.status(400).json({ error: 'Dati mancanti.' });
 
       const existing = await sql`SELECT token FROM shares
         WHERE user_id = ${user.uid} AND materia_id = ${materia_id} AND argomento_id = ${argomento_id}`;
