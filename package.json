@@ -1,9 +1,9 @@
 {
-  "name": "quizlab",
+  "name": "quizhub",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "QuizLab — quiz multi-utente, pronto per Vercel",
+  "description": "QuizHub — quiz multi-utente, pronto per Vercel",
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0"
   }

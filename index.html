@@ -2,8 +2,10 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QuizLab — Studia con i quiz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFF6EC">
+<meta name="apple-mobile-web-app-title" content="QuizHub">
+<title>QuizHub — Studia con i quiz</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Mulish:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
@@ -61,6 +63,8 @@
   .nav-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
   .nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
   .nav-btn.admin{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .nav-btn.back{color:var(--ink);background:#fff}
+  .nav-btn.back:hover{border-color:var(--ink)}
 
   /* GENERIC */
   .pagepad{padding:34px 0 70px}
@@ -172,6 +176,7 @@
   .iconbtn.exam{background:#F1ECFF;border-color:#CFC2FF}
   .exambadge{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
     color:#5B3FB8;background:#F1ECFF;border:1.5px solid #CFC2FF;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .mixbadge{font-size:12px;margin-left:6px;vertical-align:middle;opacity:.8}
   .secthead{font-size:15px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1.2px;margin:0 0 14px;font-family:"Baloo 2"}
   .contrib{font-size:12px;font-weight:800;padding:1px 7px;border-radius:999px;background:#F0E4D6;color:var(--ink-soft);vertical-align:middle}
   .contrib.pos{background:#E9FBF3;color:#0B7A52}
@@ -259,9 +264,57 @@
   .authswitch a:hover{text-decoration:underline}
 
   footer{text-align:center;color:var(--ink-soft);font-weight:700;font-size:13px;padding:30px 0 40px}
+
+  html{-webkit-text-size-adjust:100%}
+  body{overflow-x:hidden}
+
+  @media(max-width:680px){
+    .wrap{padding:0 16px}
+    .top-inner{gap:8px;padding:11px 0}
+    .logo{width:38px;height:38px;font-size:20px;border-radius:12px}
+    .brand b{font-size:20px}
+    .brand span{display:none}
+    .navright{gap:7px}
+    .nav-btn{padding:10px 13px;font-size:13px}
+    .nav-btn .lbl{display:none}            /* su telefono solo icone */
+    .userchip{padding:4px 5px}
+    .userchip .em{display:none}
+    .userchip .logout{padding:8px 12px}
+  }
+
   @media(max-width:560px){
-    .qcard,.result{padding:22px 18px}
-    .hero h1{font-size:30px}
+    .pagepad{padding:22px 0 60px}
+    .hero{margin-bottom:20px}
+    .hero h1{font-size:27px}
+    .grid{grid-template-columns:1fr;gap:14px}
+    .card{padding:18px}
+    .qcard,.result{padding:20px 16px}
+    .qcard h2{font-size:21px}
+    .opt{padding:15px 14px;font-size:15.5px}
+    .opt .key{width:28px;height:28px}
+    .btn{padding:13px 20px;font-size:15px}
+    .scoreRing{width:128px;height:128px}
+    .scoreRing b{font-size:38px}
+    .result h2{font-size:23px}
+    .qfoot{flex-wrap:wrap;gap:10px}
+    /* righe argomento: nome a tutta larghezza, pulsanti a capo sotto */
+    .arg{flex-wrap:wrap;gap:8px}
+    .arg .nm{flex-basis:100%;order:-2}
+    .arg .cnt{order:-1}
+    .iconbtn{width:40px;height:40px}       /* area di tocco più comoda */
+    .panel-head{flex-wrap:wrap;gap:10px}
+    .panel-head .tt{min-width:120px}
+    .toolbar{width:100%}
+    .toolbar .btn{flex:1 1 auto;justify-content:center}
+    .shareurl{flex-wrap:wrap}
+    .shareurl .btn{width:100%}
+    .modal-head{padding:18px 18px 4px}
+    .modal-body{padding:12px 18px 6px}
+    .modal-foot{padding:14px 18px 18px;flex-wrap:wrap}
+    .modal-foot .btn{flex:1 1 auto;justify-content:center}
+    /* niente zoom automatico su iOS quando si tocca un campo */
+    input.fld,select.fld{font-size:16px}
+    textarea.fld{font-size:14px}
   }
 </style>
 </head>
@@ -270,7 +323,7 @@
   <div class="wrap top-inner">
     <div class="brand" id="brandBtn">
       <div class="logo">Q</div>
-      <div><b>QuizLab</b><span>impara giocando</span></div>
+      <div><b>QuizHub</b><span>impara giocando</span></div>
     </div>
     <div class="spacer"></div>
     <div id="navRight" class="navright"></div>
@@ -304,6 +357,37 @@ const Auth = {
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+/* --- memoria di sessione: ricorda dove sei dopo un refresh accidentale --- */
+const NAV_KEY = 'quizhub:nav';
+function saveNav(){
+  if(!Auth.token || publicMode) return;
+  try{
+    sessionStorage.setItem(NAV_KEY, JSON.stringify({
+      view, curMateria, curArg,
+      quiz: (view==='quiz' ? quiz : null)   // salva i progressi solo durante un quiz
+    }));
+  }catch(e){}
+}
+function clearNav(){ try{ sessionStorage.removeItem(NAV_KEY); }catch(e){} }
+function restoreNav(){
+  let s = null;
+  try{ const raw = sessionStorage.getItem(NAV_KEY); s = raw ? JSON.parse(raw) : null; }catch(e){ s = null; }
+  if(!s || !s.view) return false;
+  if(s.view==='quiz' && s.quiz && Array.isArray(s.quiz.qs) && s.quiz.qs.length){
+    quiz = s.quiz;
+    curMateria = s.curMateria || s.quiz.materiaId || null;
+    curArg = s.curArg || s.quiz.argId || null;
+    view = 'quiz'; render(); return true;
+  }
+  if(s.view==='materia'){
+    if(!findMateria(s.curMateria)) return false;
+    curMateria = s.curMateria; view = 'materia'; render(); return true;
+  }
+  if(s.view==='admin'){ view='admin'; render(); return true; }
+  if(s.view==='home'){ view='home'; render(); return true; }
+  return false;
+}
 
 async function api(path, method='GET', body){
   const headers = { 'Content-Type':'application/json' };
@@ -341,9 +425,12 @@ function updateHeader(){
   const el = document.getElementById('navRight'); if(!el) return;
   if(!Auth.token){ el.innerHTML=''; return; }
   const initial = (Auth.email || '?').trim().charAt(0).toUpperCase() || '?';
-  el.innerHTML =
-    `<button class="nav-btn ${view!=='admin'?'active':''}" onclick="go('home')">📚 Studia</button>
-     <button class="nav-btn admin ${view==='admin'?'active':''}" onclick="goAdmin()">✏️ I miei quiz</button>
+  const back = (view!=='home')
+    ? `<button class="nav-btn back" title="Indietro" onclick="navBack()">←<span class="lbl"> Indietro</span></button>`
+    : '';
+  el.innerHTML = back +
+    `<button class="nav-btn ${view!=='admin'?'active':''}" title="Studia" onclick="go('home')">📚<span class="lbl"> Studia</span></button>
+     <button class="nav-btn admin ${view==='admin'?'active':''}" title="I miei quiz" onclick="goAdmin()">✏️<span class="lbl"> I miei quiz</span></button>
      <div class="userchip" title="${esc(Auth.email||'')}">
        <span class="ava">${esc(initial)}</span>
        <span class="em">${esc(Auth.email||'')}</span>
@@ -353,6 +440,7 @@ function updateHeader(){
 
 function logout(){
   Auth.clear();
+  clearNav();
   data = { materie: [] }; settings = {};
   view = 'home'; quiz = null;
   renderAuth();
@@ -446,7 +534,17 @@ function findMateria(id){ return data.materie.find(m=>m.id===id); }
 function findArg(m,id){ return m && m.argomenti.find(a=>a.id===id); }
 function countQ(m){ return m.argomenti.reduce((s,a)=>s+a.domande.length,0); }
 
-function go(v){ view=v; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function go(v){ view=v; render(); saveNav(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+function navBack(){
+  if(view==='quiz'){
+    const finished = !quiz || quiz.idx >= quiz.qs.length;
+    if(finished){ openMateria(quiz ? (quiz.materiaId || curMateria) : curMateria); }
+    else { quitQuiz(); }   // chiede conferma: si perderebbero i progressi
+    return;
+  }
+  go('home'); // da una materia o da "I miei quiz" si torna all'elenco materie
+}
 
 function render(){
   if(publicMode){ return; }
@@ -463,7 +561,7 @@ function renderHome(){
   const total = data.materie.length;
   let cards = '';
   if(total===0){
-    app.innerHTML = heroHTML('Benvenuto in QuizLab','Non c’è ancora nessuna materia. Passa alla sezione Admin per crearne una!')
+    app.innerHTML = heroHTML('Benvenuto in QuizHub','Non c’è ancora nessuna materia. Passa alla sezione Admin per crearne una!')
       + `<div class="empty"><div class="big">🗂️</div><h3>Nessuna materia</h3>
          <p>Crea la tua prima materia e aggiungi i quiz in formato JSON.</p>
          <button class="btn teal" onclick="openAdmin()">🔧 Vai all'area Admin</button></div>`;
@@ -543,27 +641,35 @@ function examCfg(e){
     reveal: !!e.reveal
   };
 }
+function maybeShuffle(qs, on){
+  if(!on) return qs;
+  const a = qs.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
 
 function startQuiz(argId){
   const m = findMateria(curMateria); const a = findArg(m, argId);
   if(!a || a.domande.length===0) return;
   curArg = argId;
   const cfg = examCfg(a.esame);
-  quiz = { qs:a.domande, idx:0, answers:new Array(a.domande.length).fill(null), locked:false,
+  const qs = maybeShuffle(a.domande, a.mescola);
+  quiz = { qs, idx:0, answers:new Array(qs.length).fill(null), locked:false,
            color:m.color, title:a.nome, subtitle:m.nome, emoji:m.emoji, materiaId:m.id, argId, public:false,
-           esame:cfg, reveal: cfg? cfg.reveal : true };
+           esame:cfg, reveal: cfg? cfg.reveal : true, mescola:!!a.mescola };
   go('quiz');
 }
 function startPublicQuiz(pq, opts){
   opts = opts || {};
   const cfg = examCfg(pq.esame);
-  quiz = { qs:pq.domande, idx:0, answers:new Array(pq.domande.length).fill(null), locked:false,
+  const qs = maybeShuffle(pq.domande, pq.mescola);
+  quiz = { qs, idx:0, answers:new Array(qs.length).fill(null), locked:false,
            color:pq.color||'#FF6B5E', title:pq.title, subtitle:pq.subtitle, emoji:pq.emoji||'📘',
-           public:true, backToMateria:!!opts.backToMateria, esame:cfg, reveal: cfg? cfg.reveal : true };
+           public:true, backToMateria:!!opts.backToMateria, esame:cfg, reveal: cfg? cfg.reveal : true, mescola:!!pq.mescola };
   publicMode = true;
   renderQuiz();
 }
-function restartQuiz(){ quiz.idx=0; quiz.answers=new Array(quiz.qs.length).fill(null); quiz.locked=false; renderQuiz(); }
+function restartQuiz(){ if(quiz.mescola) quiz.qs = maybeShuffle(quiz.qs, true); quiz.idx=0; quiz.answers=new Array(quiz.qs.length).fill(null); quiz.locked=false; renderQuiz(); }
 
 function renderQuiz(){
   if(!quiz){ return go('home'); }
@@ -623,6 +729,7 @@ function renderQuiz(){
           <div class="qfoot">${foot}</div>
         </div>
       </div>`;
+  saveNav();
 }
 
 function pick(i){
@@ -669,8 +776,8 @@ function renderResult(){
 
     pct = Math.round((finalScore / cfg.maxScore) * 100);
 
-    celebrate = false;
-    ringColor = '#3DD6A0';
+    celebrate = pct >= 80;
+    ringColor = pct>=80 ? '#3DD6A0' : pct>=50 ? '#FF9F45' : '#FF6B5E';
 
     ringSmall = `${finalScore.toFixed(1)}/${cfg.maxScore}`;
 
@@ -693,7 +800,7 @@ function renderResult(){
     const ok = ans===q.corretta;
     const yourAns = !isBlank ? q.opzioni[ans] : '—';
     let contrib='';
-    if(cfg){ const c = isBlank?cfg.vuota:(ok?cfg.giusta:cfg.sbagliata); contrib = ` <span class="contrib ${c>0?'pos':c<0?'neg':''}">${c>0?'+':''}${c}%</span>`; }
+    if(cfg){ const c = isBlank?0:(ok?cfg.questionValue:cfg.wrongPenalty); contrib = ` <span class="contrib ${c>0?'pos':c<0?'neg':''}">${c>0?'+':''}${Math.round(c*100)/100} pt</span>`; }
     rev += `<div class="rev"><div class="dot ${ok?'ok':'no'}">${ok?'✓':(isBlank?'–':'✕')}</div>
       <div><div class="t">${esc(q.domanda)}${contrib}</div>
       <div class="a">${ok? 'Risposta corretta: '+esc(q.opzioni[q.corretta]) : (isBlank?'Senza risposta':'Tu: '+esc(yourAns))+' · Corretta: '+esc(q.opzioni[q.corretta])}</div></div></div>`;
@@ -716,6 +823,7 @@ function renderResult(){
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${actions}</div>
       <div class="review"><h4>Riepilogo risposte</h4>${rev}</div>
     </div>`;
+  saveNav();
   if(celebrate) confetti();
 }
 
@@ -725,7 +833,7 @@ async function bootPublic(token){
   const nav = document.getElementById('navRight');
   if(nav) nav.innerHTML = `<button class="nav-btn" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`;
   const foot = document.getElementById('foot');
-  if(foot) foot.textContent = 'Quiz condiviso con QuizLab 🧡 — crea i tuoi gratis.';
+  if(foot) foot.textContent = 'Quiz condiviso con QuizHub 🧡 — crea i tuoi gratis.';
   app.innerHTML = `<div style="text-align:center;padding:60px 20px"><span class="pill">Carico… ⏳</span></div>`;
   try{
     const r = await fetch('/api/public?token=' + encodeURIComponent(token), {cache:'no-store'});
@@ -759,7 +867,7 @@ function renderPublicMateria(){
 }
 function startPublicArg(i){
   const pm = publicMateria; const a = pm.argomenti[i];
-  startPublicQuiz({ title:a.nome, subtitle:pm.title, emoji:pm.emoji, color:pm.color, domande:a.domande, esame:a.esame }, { backToMateria:true });
+  startPublicQuiz({ title:a.nome, subtitle:pm.title, emoji:pm.emoji, color:pm.color, domande:a.domande, esame:a.esame, mescola:a.mescola }, { backToMateria:true });
 }
 function leavePublic(){ window.location.href = location.pathname; } // toglie ?q= e torna all'app
 function renderPublicError(msg){
@@ -781,9 +889,9 @@ function renderAdmin(){
         ? `<button class="iconbtn ${shared?'shared':''}" title="${shared?'Condiviso — gestisci link':'Condividi con un link'}" onclick="shareArg('${m.id}','${a.id}')">🔗</button>`
         : '';
       args += `<div class="arg">
-        <span class="nm">${esc(a.nome)}${isExam?' <span class="exambadge">🎓 Esame</span>':''}${shared?' <span class="sharebadge" title="Quiz condiviso pubblicamente">link attivo</span>':''}</span>
+        <span class="nm">${esc(a.nome)}${isExam?' <span class="exambadge">🎓 Esame</span>':''}${a.mescola?' <span class="mixbadge" title="Domande mescolate">🔀</span>':''}${shared?' <span class="sharebadge" title="Quiz condiviso pubblicamente">link attivo</span>':''}</span>
         <span class="cnt">${a.domande.length} dom.</span>
-        <button class="iconbtn ${isExam?'exam':''}" title="Modalità esame e pesi" onclick="editEsame('${m.id}','${a.id}')">🎓</button>
+        <button class="iconbtn ${isExam?'exam':''}" title="Esame e opzioni domande" onclick="editEsame('${m.id}','${a.id}')">🎓</button>
         ${shareBtn}
         <button class="iconbtn" title="Modifica domande (JSON)" onclick="editQuestions('${m.id}','${a.id}')">📝</button>
         <button class="iconbtn" title="Rinomina" onclick="renameArg('${m.id}','${a.id}')">✏️</button>
@@ -975,8 +1083,15 @@ function editEsame(mid, aid){
 
   const e = Object.assign({}, def, a.esame || {});
 
-  showModal(`<div class="modal-head"><h3>🎓 Modalità esame</h3></div>
+  showModal(`<div class="modal-head"><h3>🎓 Esame e opzioni</h3></div>
     <div class="modal-body">
+
+      <label class="lab" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="exMix" ${a.mescola?'checked':''}
+               style="width:18px;height:18px">
+        Mescola l'ordine delle domande a ogni tentativo
+      </label>
+      <p class="hint" style="margin:6px 0 16px">Vale sia per gli allenamenti sia per gli esami.</p>
 
       <p class="hint">
         Configura "${esc(a.nome)}" come esame a punti.
@@ -1086,12 +1201,13 @@ async function saveEsame(mid, aid){
     wrongPenalty,
     reveal
   };
+  a.mescola = $('#exMix').checked;
 
   await saveData();
   closeModal();
   renderAdmin();
 
-  toast(on ? 'Esame configurato 🎓' : 'Modalità esame disattivata');
+  toast(on ? 'Esame configurato 🎓' : 'Opzioni salvate ✅');
 }
 
 /* --- editor domande JSON --- */
@@ -1200,7 +1316,7 @@ async function doImport(){
     }
     data.materie.push({ id:uid(), nome:m.nome.trim(), emoji:m.emoji||'📘',
       color:PALETTE.includes(m.color)?m.color:(m.color||PALETTE[0]),
-      argomenti:args.map(a=>({id:uid(),nome:a.nome.trim(),domande:a._clean, ...(a.esame?{esame:a.esame}:{})})) });
+      argomenti:args.map(a=>({id:uid(),nome:a.nome.trim(),domande:a._clean, ...(a.esame?{esame:a.esame}:{}), ...(a.mescola?{mescola:true}:{})})) });
   }
   await saveData(); closeModal(); renderAdmin(); toast('Importazione completata ✅');
 }
@@ -1273,7 +1389,10 @@ $('#brandBtn').addEventListener('click',()=>{
   if(Auth.token){
     try{
       const loaded = await loadData();
-      if(loaded){ view='home'; render(); return; }
+      if(loaded){
+        if(!restoreNav()){ view='home'; render(); }   // torna dov'eri dopo un refresh
+        return;
+      }
     }catch(e){ /* sessione non valida o server non raggiungibile */ }
   }
   renderAuth();

@@ -1,4 +1,4 @@
-# QuizLab 🧠 — versione multi-utente per Vercel
+# QuizHub 🧠 — versione multi-utente per Vercel
 
 Sito di quiz dove **ogni utente si registra** e crea i **propri** quiz, organizzati
 per materia e per argomento. Pronto da pubblicare su **Vercel** (piano gratuito).
@@ -62,11 +62,15 @@ vercel dev               # avvia in locale (di solito su http://localhost:3000)
 - **I miei quiz:** crea materie, aggiungi argomenti e inserisci le domande in **JSON**.
   Puoi anche **importare** una materia intera ed **esportare** un backup.
 - **Modalità Esame:** in "I miei quiz", premi **🎓** su un argomento per trasformarlo in
-  esame con punteggio a pesi configurabili: percentuale per risposta **giusta**,
-  **sbagliata** (anche negativa, per penalizzare), **non data**, e una **soglia** di
-  superamento. In modalità esame si risponde a tutte le domande e si vede il voto solo
-  alla consegna (a meno che non attivi il feedback immediato). Gli esami compaiono in una
-  sezione dedicata e si possono condividere come gli altri quiz.
+  esame a punti, con: **punteggio massimo** (es. 30), **punti per risposta corretta** e
+  **penalità per risposta sbagliata** (un numero negativo, es. -0,33). Il voto finale è la
+  somma dei punti, mostrato come valore (es. 24/30) e in percentuale. In modalità esame si
+  risponde a tutte le domande e si vede il voto solo alla consegna (a meno che non attivi il
+  feedback immediato). Gli esami compaiono in una sezione dedicata e si possono condividere
+  come gli altri quiz.
+
+- **Mescola domande:** sempre dal pulsante **🎓**, puoi attivare l'ordine casuale delle
+  domande a ogni tentativo (vale sia per gli allenamenti sia per gli esami).
 
 - **Condividi un quiz:** in "I miei quiz", premi **🔗** accanto a un quiz per ottenere un
   **link pubblico**. Chiunque lo apra può fare quel quiz **senza registrarsi**. Le tue
