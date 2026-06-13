@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     if (!sh.argomento_id) {
       const argomenti = (mat.argomenti || [])
         .filter((a) => Array.isArray(a.domande) && a.domande.length > 0)
-        .map((a) => ({ id: a.id, nome: a.nome, domande: a.domande, esame: a.esame || null, mescola: !!a.mescola }));
+        .map((a) => ({ id: a.id, nome: a.nome, domande: a.domande, esame: a.esame || null, mescola: !!a.mescola, mescolaRisposte: !!a.mescolaRisposte }));
       if (!argomenti.length) return res.status(404).json({ error: 'Questa materia non è più disponibile.' });
       return res.status(200).json({
         type: 'materia',
@@ -49,7 +49,8 @@ export default async function handler(req, res) {
       color: mat.color || '#FF6B5E',
       domande: arg.domande,
       esame: arg.esame || null,
-      mescola: !!arg.mescola
+      mescola: !!arg.mescola,
+      mescolaRisposte: !!arg.mescolaRisposte
     });
   } catch (e) {
     console.error(e);

@@ -263,10 +263,27 @@
   .authswitch a{color:var(--teal);font-weight:800;cursor:pointer;margin-left:4px}
   .authswitch a:hover{text-decoration:underline}
 
-  footer{text-align:center;color:var(--ink-soft);font-weight:700;font-size:13px;padding:30px 0 40px}
+  footer{text-align:center;color:var(--ink-soft);font-weight:700;font-size:13px;padding:30px 0 calc(40px + env(safe-area-inset-bottom))}
+  .footlinks{margin-top:8px;font-size:12.5px}
+  .footlinks a{color:var(--teal);cursor:pointer;font-weight:800}
+  .footlinks a:hover{text-decoration:underline}
+  .footlinks .sep{margin:0 8px;opacity:.5}
+
+  .cookiebar{position:fixed;left:0;right:0;bottom:0;z-index:70;
+    background:var(--ink);color:#fff;padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap;
+    box-shadow:0 -8px 24px -16px rgba(0,0,0,.5);animation:fade .3s both}
+  .cookiebar p{margin:0;font-size:13.5px;font-weight:600;max-width:620px;line-height:1.5}
+  .cookiebar a{color:#FFD8A8;font-weight:800;cursor:pointer;text-decoration:underline}
+  .cookiebar .btn{padding:10px 20px;background:var(--primary);color:#fff;border-radius:999px;font-family:"Baloo 2";font-weight:700;flex:none;box-shadow:none}
+  .legaltext{font-size:14px;line-height:1.65;color:var(--ink)}
+  .legaltext h4{font-family:"Baloo 2";font-size:16px;margin:18px 0 6px}
+  .legaltext p{margin:0 0 10px}
+  .legaltext .ph{background:#FFF1E3;color:#9C5A12;padding:1px 6px;border-radius:6px;font-weight:800}
 
   html{-webkit-text-size-adjust:100%}
   body{overflow-x:hidden}
+  header.top{padding-top:env(safe-area-inset-top)}
 
   @media(max-width:680px){
     .wrap{padding:0 16px}
@@ -312,6 +329,17 @@
     .modal-body{padding:12px 18px 6px}
     .modal-foot{padding:14px 18px 18px;flex-wrap:wrap}
     .modal-foot .btn{flex:1 1 auto;justify-content:center}
+    /* rifiniture estetiche su telefono */
+    .card{padding:20px;border-radius:20px}
+    .card .ic{width:48px;height:48px;font-size:25px;margin-bottom:13px}
+    .card h3{font-size:20px}
+    .opt{min-height:56px}
+    .authcard{padding:30px 22px;border-radius:24px}
+    .authlogo{width:56px;height:56px;font-size:28px}
+    .secthead{font-size:13px}
+    .crumbs{font-size:13px}
+    .cookiebar{flex-direction:column;text-align:center;gap:11px;padding:16px 18px calc(16px + env(safe-area-inset-bottom))}
+    .cookiebar .btn{width:100%;max-width:280px}
     /* niente zoom automatico su iOS quando si tocca un campo */
     input.fld,select.fld{font-size:16px}
     textarea.fld{font-size:14px}
@@ -332,10 +360,16 @@
 
 <main id="app" class="wrap pagepad"></main>
 
-<footer id="foot">Fatto con 🧡 — i tuoi quiz vengono salvati automaticamente.</footer>
+<footer>
+  <div id="foot">Fatto con 🧡 — i tuoi quiz vengono salvati automaticamente.</div>
+  <div class="footlinks">
+    <a onclick="openPrivacy()">Privacy</a><span class="sep">·</span><a onclick="openTerms()">Termini</a><span class="sep">·</span><a onclick="openCookie()">Cookie</a>
+  </div>
+</footer>
 
 <div id="modalRoot"></div>
 <div class="toast" id="toast"></div>
+<div id="cookieBar" class="cookiebar" hidden></div>
 
 <script>
 /* ====================== ACCOUNT + API ======================
@@ -472,6 +506,7 @@ function renderAuth(){
       <input class="fld" id="auPass" type="password" placeholder="almeno 6 caratteri" autocomplete="${authMode==='login'?'current-password':'new-password'}">
       <div class="err" id="auErr"></div>
       <button class="btn" id="auBtn" style="width:100%;margin-top:18px;box-shadow:none" onclick="submitAuth()">${authMode==='login'?'Accedi':'Registrati'}</button>
+      ${authMode==='register' ? `<p class="hint" style="margin:12px 0 0;font-size:12.5px">Registrandoti accetti i <a onclick="openTerms()" style="color:var(--teal);font-weight:800;cursor:pointer">Termini</a> e l'<a onclick="openPrivacy()" style="color:var(--teal);font-weight:800;cursor:pointer">Informativa privacy</a>.</p>` : ''}
       <p class="authswitch">${authMode==='login'?'Non hai un account?':'Hai già un account?'}
         <a onclick="toggleAuth()">${authMode==='login'?'Registrati':'Accedi'}</a></p>
     </div></div>`;
@@ -647,29 +682,47 @@ function maybeShuffle(qs, on){
   for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
   return a;
 }
+// rimescola le opzioni di UNA domanda e ri-mappa l'indice della risposta corretta
+function shuffleOptions(q){
+  const idx = q.opzioni.map((_,i)=>i);
+  for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=idx[i]; idx[i]=idx[j]; idx[j]=t; }
+  return { ...q, opzioni: idx.map(i=>q.opzioni[i]), corretta: idx.indexOf(q.corretta) };
+}
+// costruisce la lista di domande applicando i mescolamenti richiesti (senza toccare i dati salvati)
+function buildQuestions(domande, mescolaDomande, mescolaRisposte){
+  let qs = domande.slice();
+  if(mescolaDomande) qs = maybeShuffle(qs, true);
+  if(mescolaRisposte) qs = qs.map(shuffleOptions);
+  return qs;
+}
 
 function startQuiz(argId){
   const m = findMateria(curMateria); const a = findArg(m, argId);
   if(!a || a.domande.length===0) return;
   curArg = argId;
   const cfg = examCfg(a.esame);
-  const qs = maybeShuffle(a.domande, a.mescola);
+  const qs = buildQuestions(a.domande, a.mescola, a.mescolaRisposte);
   quiz = { qs, idx:0, answers:new Array(qs.length).fill(null), locked:false,
            color:m.color, title:a.nome, subtitle:m.nome, emoji:m.emoji, materiaId:m.id, argId, public:false,
-           esame:cfg, reveal: cfg? cfg.reveal : true, mescola:!!a.mescola };
+           esame:cfg, reveal: cfg? cfg.reveal : true, mescola:!!a.mescola, mescolaRisposte:!!a.mescolaRisposte };
   go('quiz');
 }
 function startPublicQuiz(pq, opts){
   opts = opts || {};
   const cfg = examCfg(pq.esame);
-  const qs = maybeShuffle(pq.domande, pq.mescola);
+  const qs = buildQuestions(pq.domande, pq.mescola, pq.mescolaRisposte);
   quiz = { qs, idx:0, answers:new Array(qs.length).fill(null), locked:false,
            color:pq.color||'#FF6B5E', title:pq.title, subtitle:pq.subtitle, emoji:pq.emoji||'📘',
-           public:true, backToMateria:!!opts.backToMateria, esame:cfg, reveal: cfg? cfg.reveal : true, mescola:!!pq.mescola };
+           public:true, backToMateria:!!opts.backToMateria, esame:cfg, reveal: cfg? cfg.reveal : true,
+           mescola:!!pq.mescola, mescolaRisposte:!!pq.mescolaRisposte };
   publicMode = true;
   renderQuiz();
 }
-function restartQuiz(){ if(quiz.mescola) quiz.qs = maybeShuffle(quiz.qs, true); quiz.idx=0; quiz.answers=new Array(quiz.qs.length).fill(null); quiz.locked=false; renderQuiz(); }
+function restartQuiz(){
+  if(quiz.mescola) quiz.qs = maybeShuffle(quiz.qs, true);
+  if(quiz.mescolaRisposte) quiz.qs = quiz.qs.map(shuffleOptions);
+  quiz.idx=0; quiz.answers=new Array(quiz.qs.length).fill(null); quiz.locked=false; renderQuiz();
+}
 
 function renderQuiz(){
   if(!quiz){ return go('home'); }
@@ -867,7 +920,7 @@ function renderPublicMateria(){
 }
 function startPublicArg(i){
   const pm = publicMateria; const a = pm.argomenti[i];
-  startPublicQuiz({ title:a.nome, subtitle:pm.title, emoji:pm.emoji, color:pm.color, domande:a.domande, esame:a.esame, mescola:a.mescola }, { backToMateria:true });
+  startPublicQuiz({ title:a.nome, subtitle:pm.title, emoji:pm.emoji, color:pm.color, domande:a.domande, esame:a.esame, mescola:a.mescola, mescolaRisposte:a.mescolaRisposte }, { backToMateria:true });
 }
 function leavePublic(){ window.location.href = location.pathname; } // toglie ?q= e torna all'app
 function renderPublicError(msg){
@@ -889,7 +942,7 @@ function renderAdmin(){
         ? `<button class="iconbtn ${shared?'shared':''}" title="${shared?'Condiviso — gestisci link':'Condividi con un link'}" onclick="shareArg('${m.id}','${a.id}')">🔗</button>`
         : '';
       args += `<div class="arg">
-        <span class="nm">${esc(a.nome)}${isExam?' <span class="exambadge">🎓 Esame</span>':''}${a.mescola?' <span class="mixbadge" title="Domande mescolate">🔀</span>':''}${shared?' <span class="sharebadge" title="Quiz condiviso pubblicamente">link attivo</span>':''}</span>
+        <span class="nm">${esc(a.nome)}${isExam?' <span class="exambadge">🎓 Esame</span>':''}${(a.mescola||a.mescolaRisposte)?' <span class="mixbadge" title="Mescolamento attivo">🔀</span>':''}${shared?' <span class="sharebadge" title="Quiz condiviso pubblicamente">link attivo</span>':''}</span>
         <span class="cnt">${a.domande.length} dom.</span>
         <button class="iconbtn ${isExam?'exam':''}" title="Esame e opzioni domande" onclick="editEsame('${m.id}','${a.id}')">🎓</button>
         ${shareBtn}
@@ -1091,7 +1144,12 @@ function editEsame(mid, aid){
                style="width:18px;height:18px">
         Mescola l'ordine delle domande a ogni tentativo
       </label>
-      <p class="hint" style="margin:6px 0 16px">Vale sia per gli allenamenti sia per gli esami.</p>
+      <label class="lab" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:10px">
+        <input type="checkbox" id="exMixOpt" ${a.mescolaRisposte?'checked':''}
+               style="width:18px;height:18px">
+        Mescola anche l'ordine delle risposte (la corretta cambia posizione)
+      </label>
+      <p class="hint" style="margin:6px 0 16px">Valgono sia per gli allenamenti sia per gli esami. Evita di mescolare le risposte se usi opzioni tipo "Tutte le precedenti".</p>
 
       <p class="hint">
         Configura "${esc(a.nome)}" come esame a punti.
@@ -1202,6 +1260,7 @@ async function saveEsame(mid, aid){
     reveal
   };
   a.mescola = $('#exMix').checked;
+  a.mescolaRisposte = $('#exMixOpt').checked;
 
   await saveData();
   closeModal();
@@ -1316,7 +1375,7 @@ async function doImport(){
     }
     data.materie.push({ id:uid(), nome:m.nome.trim(), emoji:m.emoji||'📘',
       color:PALETTE.includes(m.color)?m.color:(m.color||PALETTE[0]),
-      argomenti:args.map(a=>({id:uid(),nome:a.nome.trim(),domande:a._clean, ...(a.esame?{esame:a.esame}:{}), ...(a.mescola?{mescola:true}:{})})) });
+      argomenti:args.map(a=>({id:uid(),nome:a.nome.trim(),domande:a._clean, ...(a.esame?{esame:a.esame}:{}), ...(a.mescola?{mescola:true}:{}), ...(a.mescolaRisposte?{mescolaRisposte:true}:{})})) });
   }
   await saveData(); closeModal(); renderAdmin(); toast('Importazione completata ✅');
 }
@@ -1330,6 +1389,64 @@ function exportData(){
 /* ====================== MODALS / HELPERS ====================== */
 function showModal(html){ $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
 function closeModal(){ $('#modalRoot').innerHTML=''; }
+
+/* ====================== POLICY / COOKIE ====================== */
+const CONSENT_KEY = 'quizhub:consent';
+function legalModal(title, html){
+  showModal(`<div class="modal-head"><h3>${title}</h3></div>
+    <div class="modal-body legaltext">${html}
+      <p style="margin-top:14px;font-size:12px;opacity:.75">Questo testo è un modello di base: prima della pubblicazione fallo verificare e completa i campi tra parentesi.</p>
+    </div>
+    <div class="modal-foot"><button class="btn teal" onclick="closeModal()">Chiudi</button></div>`);
+}
+function openPrivacy(){
+  legalModal('Informativa sulla privacy', `
+    <p>QuizHub tratta i tuoi dati personali per fornirti il servizio. Titolare del trattamento: <span class="ph">[NOME E CONTATTO DEL TITOLARE]</span>, email <span class="ph">[EMAIL DI CONTATTO]</span>.</p>
+    <h4>Quali dati raccogliamo</h4>
+    <p>La tua email e la password (salvata solo in forma cifrata, mai in chiaro), i contenuti che crei (materie, argomenti, domande), e dati tecnici minimi necessari a tenerti connesso.</p>
+    <h4>Perché li trattiamo</h4>
+    <p>Per crearti un account, salvare e mostrarti i tuoi quiz e gestire i link di condivisione. Base giuridica: esecuzione del servizio che richiedi.</p>
+    <h4>Dove vengono conservati</h4>
+    <p>L'app è ospitata su Vercel e i dati sono salvati in un database Postgres (Neon). Questi fornitori agiscono come responsabili del trattamento e possono conservare i dati su propria infrastruttura.</p>
+    <h4>Per quanto tempo</h4>
+    <p>Finché mantieni l'account. Puoi chiederne la cancellazione scrivendo a <span class="ph">[EMAIL DI CONTATTO]</span>.</p>
+    <h4>I tuoi diritti</h4>
+    <p>Puoi richiedere accesso, rettifica, cancellazione, portabilità e opposizione al trattamento, e proporre reclamo all'autorità competente (in Italia, il Garante per la protezione dei dati personali).</p>
+    <h4>Pubblicità e tracciamento</h4>
+    <p>Non usiamo cookie di profilazione, né pubblicità o tracciamento di terze parti.</p>`);
+}
+function openTerms(){
+  legalModal('Termini di servizio', `
+    <p>Usando QuizHub accetti questi termini.</p>
+    <h4>Il servizio</h4>
+    <p>QuizHub ti permette di creare, svolgere e condividere quiz. Il servizio è fornito "così com'è" e può cambiare o essere interrotto.</p>
+    <h4>Account</h4>
+    <p>Il tuo account è personale: sei responsabile della riservatezza delle credenziali e delle attività svolte con esso.</p>
+    <h4>I tuoi contenuti</h4>
+    <p>Resti responsabile dei contenuti che carichi. Non inserire materiale illecito, offensivo o protetto da diritti altrui senza averne il permesso.</p>
+    <h4>Condivisione pubblica</h4>
+    <p>Quando generi un link pubblico, chiunque abbia quel link può svolgere il quiz collegato senza registrarsi. Puoi disattivare il link in qualsiasi momento.</p>
+    <h4>Responsabilità</h4>
+    <p>Nei limiti consentiti dalla legge, non rispondiamo di eventuali perdite di dati o danni derivanti dall'uso del servizio. Legge applicabile: <span class="ph">[PAESE/FORO]</span>.</p>`);
+}
+function openCookie(){
+  legalModal('Cookie e archiviazione', `
+    <p>QuizHub usa soltanto <b>archiviazione tecnica necessaria</b> al funzionamento, salvata nel tuo browser:</p>
+    <h4>A cosa serve</h4>
+    <p>A tenerti connesso (token di sessione), a riportarti al punto in cui eri dopo un aggiornamento della pagina e a ricordare la tua scelta su questo avviso.</p>
+    <h4>Cosa NON usiamo</h4>
+    <p>Nessun cookie di profilazione, nessuna pubblicità, nessun tracciamento di terze parti.</p>
+    <h4>Come rimuoverla</h4>
+    <p>Puoi cancellare questi dati in qualsiasi momento svuotando i dati del sito dalle impostazioni del browser (uscirà l'accesso).</p>`);
+}
+function showCookieBar(){
+  if(lsGet(CONSENT_KEY)) return;
+  const bar = document.getElementById('cookieBar'); if(!bar) return;
+  bar.innerHTML = `<p>Usiamo solo archiviazione tecnica necessaria al funzionamento (per tenerti connesso). Nessun tracciamento pubblicitario. <a onclick="openCookie()">Dettagli</a></p>
+    <button class="btn" onclick="acceptCookie()">Ho capito</button>`;
+  bar.hidden = false;
+}
+function acceptCookie(){ lsSet(CONSENT_KEY,'1'); const b=document.getElementById('cookieBar'); if(b) b.hidden=true; }
 function confirmModal(title,msg,okLabel,onOk,danger){
   showModal(`<div class="modal-head"><h3>${title}</h3></div>
     <div class="modal-body"><p class="hint">${msg}</p></div>
