@@ -286,7 +286,7 @@
   header.top{padding-top:env(safe-area-inset-top)}
 
   @media(max-width:680px){
-    .wrap{padding:0 16px}
+    .wrap{padding-left:max(22px, env(safe-area-inset-left));padding-right:max(22px, env(safe-area-inset-right))}
     .top-inner{gap:8px;padding:11px 0}
     .logo{width:38px;height:38px;font-size:20px;border-radius:12px}
     .brand b{font-size:20px}
@@ -844,6 +844,16 @@ function renderResult(){
         ? ` · ${wrong} sbagliate × ${cfg.wrongPenalty}`
         : '') +
       ` = ${finalScore.toFixed(1)} punti`;
+  } else {
+    // esercitazione normale (senza modalità esame): punteggio in percentuale
+    pct = Math.round((correct / tot) * 100);
+    ringColor = pct>=80 ? '#3DD6A0' : pct>=50 ? '#FF9F45' : '#FF6B5E';
+    ringSmall = `${correct}/${tot} corrette`;
+    headline = pct>=80 ? 'Ottimo!' : pct>=50 ? 'Ben fatto!' : 'Quasi!';
+    line = pct>=80 ? 'Fantastico! Conosci bene l’argomento. 🌟'
+         : pct>=50 ? 'Bel lavoro, ma puoi migliorare! 💪'
+         : 'Niente paura, riprova e andrà meglio! 🔁';
+    celebrate = pct>=80;
   }
 
   let rev='';
