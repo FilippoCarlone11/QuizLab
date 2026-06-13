@@ -281,6 +281,8 @@
   .legaltext p{margin:0 0 10px}
   .legaltext .ph{background:#FFF1E3;color:#9C5A12;padding:1px 6px;border-radius:6px;font-weight:800}
 
+  .bottomnav{display:none}
+
   html{-webkit-text-size-adjust:100%}
   body{overflow-x:hidden}
   header.top{padding-top:env(safe-area-inset-top)}
@@ -294,9 +296,23 @@
     .navright{gap:7px}
     .nav-btn{padding:10px 13px;font-size:13px}
     .nav-btn .lbl{display:none}            /* su telefono solo icone */
+    .navright .nav-btn:not(.back){display:none}  /* Studia / I miei quiz vanno nella barra in basso */
     .userchip{padding:4px 5px}
     .userchip .em{display:none}
     .userchip .logout{padding:8px 12px}
+
+    /* barra di navigazione in basso, stile app */
+    .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
+      background:rgba(255,255,255,.97);backdrop-filter:saturate(1.2) blur(10px);
+      border-top:1.5px solid var(--line-strong);
+      padding:7px 12px calc(7px + env(safe-area-inset-bottom));gap:10px}
+    .bottomnav .bn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+      padding:8px 6px;border-radius:14px;font-family:"Baloo 2";font-weight:700;font-size:11.5px;
+      color:var(--ink-soft);background:transparent;transition:background .12s,color .12s}
+    .bottomnav .bn .bi{font-size:21px;line-height:1}
+    .bottomnav .bn.on{color:var(--primary);background:#FFF0EC}
+    body.hasbottomnav{padding-bottom:68px}
+    body.hasbottomnav footer{padding-bottom:20px}
   }
 
   @media(max-width:560px){
@@ -370,6 +386,7 @@
 <div id="modalRoot"></div>
 <div class="toast" id="toast"></div>
 <div id="cookieBar" class="cookiebar" hidden></div>
+<nav id="bottomNav" class="bottomnav" hidden></nav>
 
 <script>
 /* ====================== ACCOUNT + API ======================
@@ -493,7 +510,7 @@ function tint(hex){ // soft background tint of a color
 /* ---------- schermata di accesso / registrazione ---------- */
 let authMode = 'login';
 function renderAuth(){
-  updateHeader(); updateFooter();
+  updateHeader(); updateFooter(); updateBottomNav();
   app.innerHTML = `<div class="authwrap"><div class="authcard">
       <div class="authlogo">Q</div>
       <h1>${authMode==='login' ? 'Bentornato!' : 'Crea il tuo account'}</h1>
@@ -584,11 +601,21 @@ function navBack(){
 function render(){
   if(publicMode){ return; }
   if(!Auth.token){ return renderAuth(); }
-  updateHeader(); updateFooter();
+  updateHeader(); updateFooter(); updateBottomNav();
   if(view==='home') return renderHome();
   if(view==='materia') return renderMateria();
   if(view==='quiz') return renderQuiz();
   if(view==='admin') return renderAdmin();
+}
+
+function updateBottomNav(){
+  const el = document.getElementById('bottomNav'); if(!el) return;
+  const show = Auth.token && !publicMode && view!=='quiz';
+  if(!show){ el.hidden = true; document.body.classList.remove('hasbottomnav'); return; }
+  el.hidden = false; document.body.classList.add('hasbottomnav');
+  el.innerHTML =
+    `<button class="bn ${view!=='admin'?'on':''}" onclick="go('home')"><span class="bi">📚</span><span>Studia</span></button>
+     <button class="bn ${view==='admin'?'on':''}" onclick="goAdmin()"><span class="bi">✏️</span><span>I miei quiz</span></button>`;
 }
 
 /* ====================== HOME ====================== */
@@ -751,17 +778,23 @@ function renderQuiz(){
   if(examFlow){
     const isLast = quiz.idx+1 >= quiz.qs.length;
     foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
-      <div style="display:flex;gap:10px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
         ${quiz.idx>0?`<button class="btn ghost sm" onclick="prevQ()">← Indietro</button>`:''}
         ${isLast
           ? `<button class="btn teal" style="box-shadow:none" onclick="submitExam()">✅ Consegna</button>`
-          : `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">Avanti →</button>`}
+          : `<button class="btn ghost sm" onclick="skipQuestion()">Salta ⏭</button>
+             <button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">Avanti →</button>`}
       </div>`;
   } else {
-    const footRight = quiz.locked
-      ? `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">${quiz.idx+1<quiz.qs.length?'Avanti →':(quiz.esame?'Vedi voto 🎓':'Vedi risultato 🎉')}</button>`
-      : `<button class="btn" id="confirmBtn" style="background:${quiz.color};box-shadow:none" ${picked===null?'disabled':''} onclick="confirmAns()">Conferma</button>`;
-    foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>${footRight}`;
+    let right;
+    if(quiz.locked){
+      right = `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">${quiz.idx+1<quiz.qs.length?'Avanti →':(quiz.esame?'Vedi voto 🎓':'Vedi risultato 🎉')}</button>`;
+    } else {
+      right = `<button class="btn ghost sm" onclick="skipQuestion()">Salta ⏭</button>
+        <button class="btn" id="confirmBtn" style="background:${quiz.color};box-shadow:none" ${picked===null?'disabled':''} onclick="confirmAns()">Conferma</button>`;
+    }
+    foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">${right}</div>`;
   }
 
   const top = quiz.public
@@ -795,6 +828,13 @@ function pick(i){
 function confirmAns(){ if(quiz.answers[quiz.idx]===null) return; quiz.locked=true; renderQuiz(); }
 function next(){ quiz.idx++; quiz.locked=false; renderQuiz(); }
 function prevQ(){ if(quiz.idx>0){ quiz.idx--; quiz.locked=false; renderQuiz(); } }
+function skipQuestion(){
+  quiz.answers[quiz.idx] = null;            // saltata = nessuna risposta → vale 0
+  const last = quiz.idx+1 >= quiz.qs.length;
+  if(!last){ quiz.idx++; quiz.locked=false; renderQuiz(); return; }
+  if(quiz.esame && !quiz.reveal){ submitExam(); }
+  else { quiz.idx = quiz.qs.length; renderResult(); }
+}
 function submitExam(){
   const blanks = quiz.answers.filter(a=>a==null).length;
   const finish = ()=>{ quiz.idx = quiz.qs.length; renderResult(); };
@@ -893,6 +933,7 @@ function renderResult(){
 /* ====================== MODALITÀ PUBBLICA (link condiviso) ====================== */
 async function bootPublic(token){
   publicMode = true;
+  const bn = document.getElementById('bottomNav'); if(bn){ bn.hidden = true; document.body.classList.remove('hasbottomnav'); }
   const nav = document.getElementById('navRight');
   if(nav) nav.innerHTML = `<button class="nav-btn" onclick="leavePublic()">✨ Crea i tuoi quiz</button>`;
   const foot = document.getElementById('foot');
