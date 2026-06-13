@@ -105,7 +105,14 @@
   .progress{height:12px;border-radius:999px;background:#fff;border:1.5px solid var(--line-strong);overflow:hidden;margin-bottom:6px}
   .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),#FF9F45);
     border-radius:999px;transition:width .4s ease}
-  .qcount{font-weight:800;color:var(--ink-soft);font-size:13px;margin-bottom:22px;text-align:right}
+  .qcount{font-weight:800;color:var(--ink-soft);font-size:13px;margin-bottom:12px;text-align:right}
+  .qnav{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 18px}
+  .qchip{width:32px;height:32px;border-radius:9px;border:1.5px solid var(--line-strong);background:#fff;
+    font-family:"Baloo 2";font-weight:700;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:transform .08s,border-color .12s}
+  .qchip:hover{border-color:var(--ink)}
+  .qchip:active{transform:scale(.92)}
+  .qchip.q-cur{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .qchip.q-done{background:#FFF0EC;color:var(--primary);border-color:#FFC9BE}
   .qcard{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:28px;box-shadow:var(--shadow-sm);animation:pop .35s both}
   .qcard .qnum{font-weight:800;color:var(--primary);font-size:13px;letter-spacing:1px;text-transform:uppercase}
   .qcard h2{font-size:24px;margin:8px 0 22px;letter-spacing:-.3px;line-height:1.25}
@@ -754,48 +761,44 @@ function restartQuiz(){
 function renderQuiz(){
   if(!quiz){ return go('home'); }
   if(quiz.idx >= quiz.qs.length){ return renderResult(); }
-  const examFlow = quiz.esame && !quiz.reveal;   // esame senza feedback immediato
   const q = quiz.qs[quiz.idx];
   const picked = quiz.answers[quiz.idx];
+  const locked = quiz.reveal && picked!==null;   // in modalità feedback, una volta risposto resta fisso
   const pct = Math.round((quiz.idx)/quiz.qs.length*100);
   const keys=['A','B','C','D','E','F'];
+  const isLast = quiz.idx+1 >= quiz.qs.length;
 
   let opts='';
   q.opzioni.forEach((o,i)=>{
     let cls='opt';
-    if(quiz.locked){
+    if(locked){
       if(i===q.corretta) cls+=' correct';
       else if(i===picked) cls+=' wrong';
     } else if(i===picked) cls+=' sel';
-    opts += `<button class="${cls}" ${quiz.locked?'disabled':''} title="${examFlow&&i===picked?'Tocca di nuovo per deselezionare':''}" onclick="pick(${i})">
+    const tip = (!quiz.reveal && i===picked) ? 'Tocca di nuovo per deselezionare' : '';
+    opts += `<button class="${cls}" ${locked?'disabled':''} title="${tip}" onclick="pick(${i})">
       <span class="key">${keys[i]}</span><span>${esc(o)}</span></button>`;
   });
 
-  const expl = (quiz.locked && q.spiegazione)
+  const expl = (locked && q.spiegazione)
     ? `<div class="explain"><b>${picked===q.corretta?'Esatto! ✅':'Non proprio 🔍'}</b> — ${esc(q.spiegazione)}</div>` : '';
 
-  let foot;
-  if(examFlow){
-    const isLast = quiz.idx+1 >= quiz.qs.length;
-    foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
-        ${quiz.idx>0?`<button class="btn ghost sm" onclick="prevQ()">← Indietro</button>`:''}
-        ${isLast
-          ? `<button class="btn teal" style="box-shadow:none" onclick="submitExam()">✅ Consegna</button>`
-          : `<button class="btn ghost sm" onclick="skipQuestion()">Salta ⏭</button>
-             <button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">Avanti →</button>`}
-      </div>`;
-  } else {
-    let right;
-    if(quiz.locked){
-      right = `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">${quiz.idx+1<quiz.qs.length?'Avanti →':(quiz.esame?'Vedi voto 🎓':'Vedi risultato 🎉')}</button>`;
-    } else {
-      right = `<button class="btn ghost sm" onclick="skipQuestion()">Salta ⏭</button>
-        <button class="btn" id="confirmBtn" style="background:${quiz.color};box-shadow:none" ${picked===null?'disabled':''} onclick="confirmAns()">Conferma</button>`;
-    }
-    foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">${right}</div>`;
-  }
+  // navigatore: salta a qualunque domanda
+  let qnav='';
+  quiz.qs.forEach((_,i)=>{
+    const st = i===quiz.idx ? 'q-cur' : (quiz.answers[i]!==null ? 'q-done' : 'q-todo');
+    qnav += `<button class="qchip ${st}" onclick="gotoQ(${i})" title="Domanda ${i+1}">${i+1}</button>`;
+  });
+
+  // un solo tasto avanti: fa da "continua" e da "salta" (se non rispondi vale 0)
+  const fwd = (isLast && quiz.esame)
+    ? `<button class="btn teal" style="box-shadow:none" onclick="submitExam()">✅ Consegna</button>`
+    : `<button class="btn" style="background:${quiz.color};box-shadow:none" onclick="next()">${isLast?'Vedi risultato 🎉':'Avanti →'}</button>`;
+  const foot = `<button class="btn ghost sm" onclick="quitQuiz()">✕ Esci</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+      ${quiz.idx>0?`<button class="btn ghost sm" onclick="prevQ()">← Indietro</button>`:''}
+      ${fwd}
+    </div>`;
 
   const top = quiz.public
     ? `<div class="crumbs"><span>${quiz.emoji} ${esc(quiz.subtitle)} › ${esc(quiz.title)}</span></div>`
@@ -807,6 +810,7 @@ function renderQuiz(){
     + `<div class="quizbox">
         <div class="progress"><i style="width:${pct}%"></i></div>
         <div class="qcount">Domanda ${quiz.idx+1} di ${quiz.qs.length}</div>
+        <div class="qnav">${qnav}</div>
         <div class="qcard">
           <div class="qnum">${esc(quiz.title)} ${badge}</div>
           <h2>${esc(q.domanda)}</h2>
@@ -819,22 +823,18 @@ function renderQuiz(){
 }
 
 function pick(i){
-  if(quiz.esame && !quiz.reveal){ // esame: seleziona/deseleziona liberamente
-    quiz.answers[quiz.idx] = (quiz.answers[quiz.idx]===i) ? null : i;
+  if(quiz.reveal){
+    if(quiz.answers[quiz.idx]!==null) return;   // già risposto: in modalità feedback resta fisso
+    quiz.answers[quiz.idx]=i;                    // selezionare = confermare e mostrare la correzione
     renderQuiz(); return;
   }
-  if(quiz.locked) return; quiz.answers[quiz.idx]=i; renderQuiz();
+  // modalità esame senza feedback: seleziona/deseleziona liberamente
+  quiz.answers[quiz.idx] = (quiz.answers[quiz.idx]===i) ? null : i;
+  renderQuiz();
 }
-function confirmAns(){ if(quiz.answers[quiz.idx]===null) return; quiz.locked=true; renderQuiz(); }
-function next(){ quiz.idx++; quiz.locked=false; renderQuiz(); }
-function prevQ(){ if(quiz.idx>0){ quiz.idx--; quiz.locked=false; renderQuiz(); } }
-function skipQuestion(){
-  quiz.answers[quiz.idx] = null;            // saltata = nessuna risposta → vale 0
-  const last = quiz.idx+1 >= quiz.qs.length;
-  if(!last){ quiz.idx++; quiz.locked=false; renderQuiz(); return; }
-  if(quiz.esame && !quiz.reveal){ submitExam(); }
-  else { quiz.idx = quiz.qs.length; renderResult(); }
-}
+function next(){ quiz.idx++; renderQuiz(); }                 // avanti = continua/salta (se vuoto vale 0)
+function prevQ(){ if(quiz.idx>0){ quiz.idx--; renderQuiz(); } }
+function gotoQ(i){ if(i>=0 && i<quiz.qs.length){ quiz.idx=i; renderQuiz(); } }
 function submitExam(){
   const blanks = quiz.answers.filter(a=>a==null).length;
   const finish = ()=>{ quiz.idx = quiz.qs.length; renderResult(); };
