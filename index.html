@@ -111,8 +111,10 @@
     font-family:"Baloo 2";font-weight:700;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:transform .08s,border-color .12s}
   .qchip:hover{border-color:var(--ink)}
   .qchip:active{transform:scale(.92)}
-  .qchip.q-cur{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .qchip.q-cur{box-shadow:0 0 0 3px rgba(31,41,55,.18);border-color:var(--ink);font-weight:800}
   .qchip.q-done{background:#FFF0EC;color:var(--primary);border-color:#FFC9BE}
+  .qchip.q-correct{background:#E3F8EF;color:#1B9E6A;border-color:#9BE3C4}
+  .qchip.q-wrong{background:#FDE7E4;color:#D63B2C;border-color:#F3B4AC}
   .qcard{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:28px;box-shadow:var(--shadow-sm);animation:pop .35s both}
   .qcard .qnum{font-weight:800;color:var(--primary);font-size:13px;letter-spacing:1px;text-transform:uppercase}
   .qcard h2{font-size:24px;margin:8px 0 22px;letter-spacing:-.3px;line-height:1.25}
@@ -290,12 +292,14 @@
 
   .bottomnav{display:none}
 
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%;overflow-x:hidden}
   body{overflow-x:hidden}
   header.top{padding-top:env(safe-area-inset-top)}
 
   @media(max-width:680px){
     .wrap{padding-left:max(22px, env(safe-area-inset-left));padding-right:max(22px, env(safe-area-inset-right))}
+    .hero{flex-direction:column;align-items:flex-start;gap:10px}
+    .hero h1{overflow-wrap:anywhere}
     .top-inner{gap:8px;padding:11px 0}
     .logo{width:38px;height:38px;font-size:20px;border-radius:12px}
     .brand b{font-size:20px}
@@ -783,11 +787,16 @@ function renderQuiz(){
   const expl = (locked && q.spiegazione)
     ? `<div class="explain"><b>${picked===q.corretta?'Esatto! ✅':'Non proprio 🔍'}</b> — ${esc(q.spiegazione)}</div>` : '';
 
-  // navigatore: salta a qualunque domanda
+  // navigatore: salta a qualunque domanda; quadratini colorati per esito
   let qnav='';
-  quiz.qs.forEach((_,i)=>{
-    const st = i===quiz.idx ? 'q-cur' : (quiz.answers[i]!==null ? 'q-done' : 'q-todo');
-    qnav += `<button class="qchip ${st}" onclick="gotoQ(${i})" title="Domanda ${i+1}">${i+1}</button>`;
+  quiz.qs.forEach((qq,i)=>{
+    const ans = quiz.answers[i];
+    let st;
+    if(ans===null) st='q-todo';
+    else if(quiz.reveal) st = (ans===qq.corretta) ? 'q-correct' : 'q-wrong';
+    else st='q-done';                       // esame senza feedback: non rivelare l'esito
+    const cur = i===quiz.idx ? ' q-cur' : '';
+    qnav += `<button class="qchip ${st}${cur}" onclick="gotoQ(${i})" title="Domanda ${i+1}">${i+1}</button>`;
   });
 
   // un solo tasto avanti: fa da "continua" e da "salta" (se non rispondi vale 0)
